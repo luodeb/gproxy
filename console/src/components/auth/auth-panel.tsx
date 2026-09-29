@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
-import { ArrowLeftIcon, LoaderCircleIcon } from "lucide-react"
+import { LoaderCircleIcon } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,10 +21,7 @@ export function AuthPanel({ setup, audience = "admin", pending, failed, onSubmit
   return (
     <main className="grid min-h-screen place-items-center px-5 py-10">
       <div className="flex w-full max-w-md flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <Button asChild variant="ghost" size="sm" className="-ml-3">
-            <a href="/"><ArrowLeftIcon />{t("auth.home")}</a>
-          </Button>
+        <div className="flex items-center justify-end">
           <LocaleControls />
         </div>
         <Card>

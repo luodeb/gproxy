@@ -21,6 +21,11 @@
 | 运营控制台 | `/admin` | 管理员 Web UI |
 | 用户门户 | `/portal` | 终端用户自助页面 |
 
+> **与 upstream 的差异**：本 fork **移除了公共营销首页**。根路径 `/` 现在直接进入
+> 运营控制台 surface（未登录时即登录页），不再有 landing page。
+> 相应源码（`console/src/components/public/`、`console/src/pages/public.tsx`、
+> `console/src/styles/public-*.css`）已删除。`/admin`、`/portal`、`/v1/*` 行为不变。
+
 ### 能力概览
 
 - **多协议接入**：OpenAI Chat Completions、OpenAI Responses、Claude Messages、Gemini GenerateContent（含流式）；支持跨格式转换。

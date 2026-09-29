@@ -5,9 +5,6 @@ import "@/i18n"
 import { ThemeProvider } from "@/lib/theme"
 import { applyInitialTheme } from "@/lib/theme-state"
 import "@/styles/globals.css"
-import "@/styles/public.css"
-import "@/styles/public-wire.css"
-import "@/styles/public-claims.css"
 
 applyInitialTheme()
 

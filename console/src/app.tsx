@@ -1,16 +1,15 @@
 import { lazy, Suspense } from "react"
-import { PublicPage } from "@/pages/public"
 import { QueryState } from "@/components/query-state"
 
 const AdminSurface = lazy(() => import("@/surfaces/admin-surface").then((module) => ({ default: module.AdminSurface })))
 const PortalSurface = lazy(() => import("@/surfaces/portal-surface").then((module) => ({ default: module.PortalSurface })))
 
-type Surface = "public" | "portal" | "admin"
+type Surface = "portal" | "admin"
 
+// 根路径直接进入登录页（admin surface 未登录时渲染 AuthPanel），不再有公共首页。
 function surfaceForPath(pathname: string): Surface {
-  if (pathname === "/admin" || pathname.startsWith("/admin/")) return "admin"
   if (pathname === "/portal" || pathname.startsWith("/portal/")) return "portal"
-  return "public"
+  return "admin"
 }
 
 function SurfaceLoading() {
@@ -19,7 +18,6 @@ function SurfaceLoading() {
 
 export function App() {
   const surface = surfaceForPath(window.location.pathname)
-  if (surface === "public") return <PublicPage />
   if (surface === "portal") return <Suspense fallback={<SurfaceLoading />}><PortalSurface /></Suspense>
   return <Suspense fallback={<SurfaceLoading />}><AdminSurface /></Suspense>
 }
