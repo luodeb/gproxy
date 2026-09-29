@@ -98,7 +98,7 @@ yocto 侧原来的 frpc 容器已删除；`remotePort` 仍为 56188，Caddy 无�
 | 其它容器 | `trae-hub`、`merged-proxy`、`x-kernel-jenkins` |
 | 旧 systemd 单元 | `/home/yocto/.config/systemd/user/gproxy.service`（已 stop + disable，仅作回滚） |
 
-### 环境变量（写在 `docker-compose.yml` 的 `environment` 里）
+### 环境变量（由 `container/.env` 经 `env_file` 注入，**不入库**）
 
 | 变量 | 说明 |
 |---|---|
@@ -195,7 +195,7 @@ cargo zigbuild --locked --release -p gproxy-host-axum --target x86_64-unknown-li
 ```sh
 scp target/x86_64-unknown-linux-musl/release/gproxy yocto:/home/yocto/gproxy/bin/gproxy.tmp
 ssh yocto 'chmod 755 /home/yocto/gproxy/bin/gproxy.tmp && mv -f /home/yocto/gproxy/bin/gproxy.tmp /home/yocto/gproxy/bin/gproxy'
-ssh yocto 'cd /home/yocto/gproxy/container && docker-compose up -d --force-recreate gproxy'
+ssh yocto 'cd /home/yocto/gproxy/container && docker compose up -d --force-recreate gproxy'
 ```
 
 运维命令：
@@ -208,8 +208,8 @@ ssh yocto 'docker restart gproxy'                          # 重启容器
 ssh yocto '/home/yocto/gproxy/bin/gproxy --version'        # 版本
 ```
 
-回滚：`bin/` 下保留了最近 5 份 `gproxy.bak-<时间戳>`，直接 `mv` 回去再 `docker-compose up -d --force-recreate` 即可。
-回滚到 systemd 裸进程：`docker-compose down` → `systemctl --user enable --now gproxy.service`（先停容器，避免端口冲突）。
+回滚：`bin/` 下保留了最近 5 份 `gproxy.bak-<时间戳>`，直接 `mv` 回去再 `docker compose up -d --force-recreate` 即可。
+回滚到 systemd 裸进程：`docker compose down` → `systemctl --user enable --now gproxy.service`（先停容器，避免端口冲突）。
 
 > yocto 上**二进制由本机 scp 过去**（静态 musl），不在远端构建。
 

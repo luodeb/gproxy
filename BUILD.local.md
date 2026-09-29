@@ -145,15 +145,20 @@ gproxy 以 **docker 容器** `gproxy` 运行，容器内用 **supervisord 作 PI
 | `Dockerfile` | `alpine` + `apk add supervisor`，构建出 `gproxy-supervisor:latest` |
 | `supervisord.conf` | `[program:gproxy]`：`autorestart=true`、落日志到 stdout/stderr |
 | `docker-compose.yml` | `network_mode: host`、`user: 1002:1002`、`restart: unless-stopped`，挂载 `bin/`（只读）与 `data/` |
+| `.env` | **敏感变量（不入库）**：`GPROXY_MASTER_KEY`、`GPROXY_ADMIN_PASSWORD` 等；`chmod 600`。模板见 `.env.example` |
 
 管理：
 
 ```sh
-ssh yocto 'cd /home/yocto/gproxy/container && docker-compose up -d'    # 启动/重建
-ssh yocto 'docker logs -f gproxy'                                      # 跟随日志
-ssh yocto 'docker exec gproxy supervisorctl status'                    # supervisor 视角
-ssh yocto 'docker restart gproxy'                                      # 重启
+ssh yocto 'cd /home/yocto/gproxy/container && docker compose up -d'  # 启动/重建
+ssh yocto 'docker logs -f gproxy'                                    # 跟随日志
+ssh yocto 'docker exec gproxy supervisorctl status'                  # supervisor 视角
+ssh yocto 'docker restart gproxy'                                    # 重启
 ```
+
+> ⚠️ yocto 自带的 `docker-compose` 是 **v1（1.29.2）**，与 Docker 29 不兼容
+> （`--force-recreate` 会报 `KeyError: 'ContainerConfig'`）。已安装 **compose v2** 到
+> `~/.docker/cli-plugins/docker-compose`，**用 `docker compose`（带空格）而不是 `docker-compose`**。
 
 镜像构建（远程，注意用空 build-arg 覆盖 daemon 里的死代理）：
 
@@ -164,7 +169,7 @@ ssh yocto 'cd /home/yocto/gproxy/container && docker build \
   -t gproxy-supervisor:latest .'
 ```
 
-二进制仍由 `scripts/local-deploy.sh` 原子替换后 `docker-compose up -d --force-recreate` 生效。
+二进制仍由 `scripts/local-deploy.sh` 原子替换后 `docker compose up -d --force-recreate` 生效。
 
 > 容器与宿主 **host network**，故 gproxy 直接绑 `0.0.0.0:58881`，端口语义与裸进程时一致。
 
@@ -194,7 +199,7 @@ RestartSec=3
 WantedBy=default.target
 ```
 
-回滚到裸进程：先 `docker-compose down`，再 `systemctl --user enable --now gproxy.service`。
+回滚到裸进程：先 `docker compose down`，再 `systemctl --user enable --now gproxy.service`。
 **同一时间只能有一个实例绑定 58881**，务必先停另一个。
 
 ### 坑：GPROXY_MASTER_KEY 与 plaintext 模式
@@ -209,6 +214,33 @@ Error: Encryption("store requires plaintext mode, but GPROXY_MASTER_KEY is set")
 因此**第一次启动前就要设好 key**。若已经踩到，且库里没有数据，
 把 `data/` 改名留档、建空目录重启即可（会重新生成 admin 密码/API key）。
 老目录已在 yocto 留档为 `data.plaintext-<时间戳>`。
+
+### 坑：密钥泄露如何轮换
+
+`GPROXY_MASTER_KEY` / `GPROXY_ADMIN_PASSWORD` **绝不能写进入库文件**（compose 用 `env_file: .env`）。
+若不慎泄露，两者都要换：
+
+**管理台密码**——改 `.env` 里的 `GPROXY_ADMIN_PASSWORD` 后 `docker compose up -d --force-recreate`。
+
+**master key**——gproxy 内置轮换，不必重建库：
+
+```sh
+# 1) 停服务，新 key 用 GPROXY_MASTER_KEY_NEXT 传入，并置 ROTATE=true
+#    （用一次性容器跑完即退，全部 secret 会重新封存到新 key）
+docker run --rm --network none --user 1002:1002 \
+  -v /home/yocto/gproxy/bin:/home/yocto/gproxy/bin:ro \
+  -v /home/yocto/gproxy/data:/home/yocto/gproxy/data \
+  -e GPROXY_DATA_DIR=/home/yocto/gproxy/data \
+  -e GPROXY_MASTER_KEY=<旧key> \
+  -e GPROXY_MASTER_KEY_NEXT=<新key> -e GPROXY_MASTER_KEY_ROTATE=true \
+  --entrypoint /home/yocto/gproxy/bin/gproxy -d gproxy-supervisor:latest
+# 日志出现 "secret-key rotation completed" 即成功
+
+# 2) 把 .env 里的 GPROXY_MASTER_KEY 换成新 key，去掉 NEXT/ROTATE 两个变量
+# 3) docker compose up -d --force-recreate
+```
+
+轮换前先 `cp -a data data-backups/data-<时间戳>`。旧 key 轮换后立即失效。
 
 ## 5. 端口占用（yocto）
 
