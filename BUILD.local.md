@@ -183,9 +183,8 @@ Error: Encryption("store requires plaintext mode, but GPROXY_MASTER_KEY is set")
 | 端口 | 服务 |
 |---|---|
 | 58880 | trae-hub（本机上游） |
-| **58881** | **gproxy（现役，占用原 LiteLLM 端口）** |
+| **58881** | **gproxy（现役）** |
 | 8088 | merged-proxy |
 | 80/443 | 反代 |
 
-> ⚠️ **不要改 frpc / Caddy**：gproxy 直接监听 58881，与旧网关同端口，反代配置一字未改。
-> 历史上曾误把 frpc `localPort` 改成 58882，已纠正——网关适配端口，不是端口适配网关。
+> gproxy 直接监听 58881，与之前的网关同端口，反代配置无需改动。

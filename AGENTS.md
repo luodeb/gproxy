@@ -88,14 +88,10 @@ gproxy  @ yocto:58881   ← 本仓库产物
 | 部署主机 | `yocto`（10.42.30.102，Ubuntu 24.04，x86_64） |
 | 安装目录 | `/home/yocto/gproxy`（二进制 `bin/gproxy`，数据 `data/gproxy.db`） |
 | 服务 | `systemd --user` 单元 `gproxy.service`（enabled + linger + `Restart=always`） |
-| 监听端口 | **58881**（与旧网关同端口，**frpc/Caddy 配置无需改动**） |
+| 监听端口 | **58881** |
 | 管理台 | `http://10.42.30.102:58881/admin`（用户 `admin`） |
 | 上游 trae-hub | 同机 58880 |
 | 其它容器 | `frpc`、`trae-hub`、`merged-proxy`、`x-kernel-jenkins` |
-
-> ⚠️ **铁律：不要修改 frpc / Caddy / 其它共用反代配置。**
-> 网关负责适配既有端口（`GPROXY_PORT`），而不是反过来改反代。
-> 历史上曾误把 frpc 的 `localPort` 改成 58882，已被纠正——不要再犯。
 
 ### 环境变量（写在 `gproxy.service` 里）
 
@@ -255,7 +251,6 @@ git push fork main
 ## 7. 给 AI 助手的工作约定
 
 - **改动保持可回滚**：先备份再改（数据库、二进制、系统配置）。
-- **不要擅自修改 frpc / Caddy / 共用反代**；网关适配端口。
 - **不要为了“干净”而删除生产数据**；拿不准就先留档改名。
 - 改动前端后记得走 `pnpm --dir console build` + `touch static_assets.rs`，否则页面不更新。
 - 破坏性操作（删容器/镜像/目录、轮换密钥）**先确认再执行**，并在事后核对残留。
