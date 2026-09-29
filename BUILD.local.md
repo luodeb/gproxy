@@ -1,5 +1,9 @@
 # 本地构建 / 部署备忘（luodeb fork）
 
+> **日常直接用一键脚本即可**：`scripts/local-deploy.sh`（构建 + 部署 + 健康检查）。
+> 本文件保留手动步骤与踩坑细节，供排查问题或改脚本时参考。
+> 项目总说明见 `AGENTS.md`。
+
 本文件记录**本机（Debian 13, x86_64）**构建 gproxy 的完整流程，以及部署到 **yocto**（10.42.30.102, Ubuntu 24.04）的步骤。
 upstream 的 CI 用 GitHub Actions + `cross`，本机没有 docker，因此用 **zig 作为 musl 交叉工具链**。
 
@@ -143,7 +147,7 @@ Type=simple
 WorkingDirectory=/home/yocto/gproxy
 Environment=GPROXY_UPDATE_CHANNEL_SERVE=dev
 Environment=GPROXY_HOST=0.0.0.0
-Environment=GPROXY_PORT=58882
+Environment=GPROXY_PORT=58881
 Environment=GPROXY_DATA_DIR=/home/yocto/gproxy/data
 Environment=GPROXY_MASTER_KEY=<32字节 base64>
 ExecStart=/home/yocto/gproxy/bin/gproxy
@@ -179,7 +183,9 @@ Error: Encryption("store requires plaintext mode, but GPROXY_MASTER_KEY is set")
 | 端口 | 服务 |
 |---|---|
 | 58880 | trae-hub（本机上游） |
-| 58881 | LiteLLM（现役） |
-| **58882** | **gproxy（新）** |
+| **58881** | **gproxy（现役，占用原 LiteLLM 端口）** |
 | 8088 | merged-proxy |
 | 80/443 | 反代 |
+
+> ⚠️ **不要改 frpc / Caddy**：gproxy 直接监听 58881，与旧网关同端口，反代配置一字未改。
+> 历史上曾误把 frpc `localPort` 改成 58882，已纠正——网关适配端口，不是端口适配网关。
