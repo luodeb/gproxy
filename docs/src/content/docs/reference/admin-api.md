@@ -120,10 +120,20 @@ as a bearer token. For example, with `pi-mcp-adapter`:
   "mcpServers": {
     "gproxy": {
       "url": "https://ai.debin.cc/admin/api/mcp",
+      "auth": "bearer",
       "bearerToken": "sk-gp-…"
     }
   }
 }
+```
+
+The `auth` field selects the credential strategy; without it the adapter treats
+the server as anonymous and never sends the token. A leading `!` in
+`bearerToken` runs a command at connect time, so the key can stay in a file
+instead of the config:
+
+```json
+"bearerToken": "!cat ~/.config/gproxy/agent.key"
 ```
 
 Over the loopback interface the same endpoint is

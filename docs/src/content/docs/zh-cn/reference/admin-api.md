@@ -109,10 +109,19 @@ key。以 `pi-mcp-adapter` 为例：
   "mcpServers": {
     "gproxy": {
       "url": "https://ai.debin.cc/admin/api/mcp",
+      "auth": "bearer",
       "bearerToken": "sk-gp-…"
     }
   }
 }
+```
+
+`auth` 字段决定凭据策略，缺少它时适配器会把该服务当作匿名服务，token 不会
+被发送。`bearerToken` 以 `!` 开头时会在连接时执行该命令，因此 key 可以只放在
+文件里而不写进配置：
+
+```json
+"bearerToken": "!cat ~/.config/gproxy/agent.key"
 ```
 
 走回环接口时，端点同样是 `http://127.0.0.1:58881/admin/api/mcp`。
