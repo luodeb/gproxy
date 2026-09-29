@@ -33,3 +33,6 @@ probe-out/
 /AGENTS.md
 /CLAUDE.md
 /design/
+
+# 本地环境变量（含密钥），勿入库
+.env

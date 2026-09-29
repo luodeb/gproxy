@@ -20,12 +20,15 @@
 #   -h, --help       帮助
 #
 # 可覆盖的环境变量:
-#   DEPLOY_HOST    远端 ssh 别名        默认 yocto
-#   DEPLOY_DIR     远端安装目录         默认 /home/yocto/gproxy
-#   DEPLOY_SERVICE 远端 systemd 单元    默认 gproxy.service
-#   DEPLOY_PORT    健康检查端口          默认 58881
-#   TARGET         Rust triple          默认 x86_64-unknown-linux-musl
-#   ZIG_VERSION    zig 版本             默认 0.15.2
+#   DEPLOY_HOST      远端 ssh 别名        默认 yocto
+#   DEPLOY_DIR       远端安装目录         默认 /home/yocto/gproxy
+#   DEPLOY_RUNTIME   远端运行方式         auto | docker | systemd  （默认 auto）
+#   DEPLOY_CONTAINER docker 容器名         默认 gproxy
+#   DEPLOY_COMPOSE   远端 compose 目录     默认 $DEPLOY_DIR/container
+#   DEPLOY_SERVICE   远端 systemd 单元     默认 gproxy.service
+#   DEPLOY_PORT      健康检查端口          默认 58881
+#   TARGET           Rust triple          默认 x86_64-unknown-linux-musl
+#   ZIG_VERSION      zig 版本             默认 0.15.2
 #
 set -euo pipefail
 
@@ -34,6 +37,9 @@ cd "$root"
 
 DEPLOY_HOST="${DEPLOY_HOST:-yocto}"
 DEPLOY_DIR="${DEPLOY_DIR:-/home/yocto/gproxy}"
+DEPLOY_RUNTIME="${DEPLOY_RUNTIME:-auto}"
+DEPLOY_CONTAINER="${DEPLOY_CONTAINER:-gproxy}"
+DEPLOY_COMPOSE="${DEPLOY_COMPOSE:-$DEPLOY_DIR/container}"
 DEPLOY_SERVICE="${DEPLOY_SERVICE:-gproxy.service}"
 DEPLOY_PORT="${DEPLOY_PORT:-58881}"
 TARGET="${TARGET:-x86_64-unknown-linux-musl}"
@@ -209,16 +215,49 @@ deploy() {
   ok "二进制已更新"
 
   if $restart; then
-    log "重启 $DEPLOY_SERVICE"
-    run ssh -o BatchMode=yes "$DEPLOY_HOST" "systemctl --user restart '$DEPLOY_SERVICE'"
-    $dry_run || sleep 4
-    if ! $dry_run; then
-      ssh -o BatchMode=yes "$DEPLOY_HOST" "systemctl --user is-active '$DEPLOY_SERVICE'" \
-        | grep -qx active || die "服务未处于 active，请查看 journalctl --user -u $DEPLOY_SERVICE"
-      ok "服务 active"
+    local runtime
+    runtime="$(detect_runtime)"
+    if [ "$runtime" = docker ]; then
+      log "重启容器 $DEPLOY_CONTAINER（compose up -d）"
+      # 优先用 compose v2（docker compose），它才兼容新版 docker daemon；
+      # 旧版 docker-compose v1 在 Docker 29 上会报 KeyError: 'ContainerConfig'。
+      run ssh -o BatchMode=yes "$DEPLOY_HOST" \
+        "cd '$DEPLOY_COMPOSE' && { docker compose version >/dev/null 2>&1 && docker compose up -d --force-recreate '$DEPLOY_CONTAINER' || docker-compose up -d --force-recreate '$DEPLOY_CONTAINER'; }"
+      $dry_run || sleep 6
+      if ! $dry_run; then
+        ssh -o BatchMode=yes "$DEPLOY_HOST" \
+          "[ \"\$(docker inspect -f '{{.State.Running}}' '$DEPLOY_CONTAINER')\" = true ]" \
+          || die "容器未运行，请查看 docker logs $DEPLOY_CONTAINER"
+        ok "容器运行中（supervisord 内存活）"
+      fi
+    else
+      log "重启 $DEPLOY_SERVICE"
+      run ssh -o BatchMode=yes "$DEPLOY_HOST" "systemctl --user restart '$DEPLOY_SERVICE'"
+      $dry_run || sleep 4
+      if ! $dry_run; then
+        ssh -o BatchMode=yes "$DEPLOY_HOST" "systemctl --user is-active '$DEPLOY_SERVICE'" \
+          | grep -qx active || die "服务未处于 active，请查看 journalctl --user -u $DEPLOY_SERVICE"
+        ok "服务 active"
+      fi
     fi
   else
     warn "已跳过重启（--no-restart），改动将在下次重启后生效"
+  fi
+}
+
+# 判定远端是容器还是 systemd：auto 时优先看容器是否存在
+detect_runtime() {
+  case "$DEPLOY_RUNTIME" in
+    docker|systemd) echo "$DEPLOY_RUNTIME"; return 0 ;;
+    auto) ;;
+    *) die "DEPLOY_RUNTIME 取值非法: $DEPLOY_RUNTIME（应为 auto/docker/systemd）" ;;
+  esac
+  if $dry_run; then printf '\033[2m  $ ssh %s docker inspect %s\033[0m\n' "$DEPLOY_HOST" "$DEPLOY_CONTAINER" >&2; fi
+  if ssh -o BatchMode=yes "$DEPLOY_HOST" \
+       "docker inspect '$DEPLOY_CONTAINER' >/dev/null 2>&1"; then
+    echo docker
+  else
+    echo systemd
   fi
 }
 

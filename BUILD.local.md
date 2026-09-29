@@ -135,7 +135,43 @@ yocto 上没有外网，用 scp 拷静态二进制：
 scp target/x86_64-unknown-linux-musl/release/gproxy yocto:/home/yocto/gproxy/bin/gproxy
 ```
 
-systemd **user** 服务：`/home/yocto/.config/systemd/user/gproxy.service`（已 `loginctl enable-linger yocto`）：
+### 4.1 运行方式：supervisord 容器（现役）
+
+gproxy 以 **docker 容器** `gproxy` 运行，容器内用 **supervisord 作 PID 1** 托管 gproxy 进程。
+镜像与编排文件位于 `/home/yocto/gproxy/container/`：
+
+| 文件 | 作用 |
+|---|---|
+| `Dockerfile` | `alpine` + `apk add supervisor`，构建出 `gproxy-supervisor:latest` |
+| `supervisord.conf` | `[program:gproxy]`：`autorestart=true`、落日志到 stdout/stderr |
+| `docker-compose.yml` | `network_mode: host`、`user: 1002:1002`、`restart: unless-stopped`，挂载 `bin/`（只读）与 `data/` |
+
+管理：
+
+```sh
+ssh yocto 'cd /home/yocto/gproxy/container && docker-compose up -d'    # 启动/重建
+ssh yocto 'docker logs -f gproxy'                                      # 跟随日志
+ssh yocto 'docker exec gproxy supervisorctl status'                    # supervisor 视角
+ssh yocto 'docker restart gproxy'                                      # 重启
+```
+
+镜像构建（远程，注意用空 build-arg 覆盖 daemon 里的死代理）：
+
+```sh
+ssh yocto 'cd /home/yocto/gproxy/container && docker build \
+  --build-arg http_proxy= --build-arg https_proxy= \
+  --build-arg HTTP_PROXY= --build-arg HTTPS_PROXY= --build-arg NO_PROXY=\* \
+  -t gproxy-supervisor:latest .'
+```
+
+二进制仍由 `scripts/local-deploy.sh` 原子替换后 `docker-compose up -d --force-recreate` 生效。
+
+> 容器与宿主 **host network**，故 gproxy 直接绑 `0.0.0.0:58881`，端口语义与裸进程时一致。
+
+### 4.2 运行方式：systemd --user（已停用，保留回滚）
+
+旧的 `systemd --user` 单元 `/home/yocto/.config/systemd/user/gproxy.service`（已 `loginctl enable-linger yocto`）
+已 `stop` + `disable`，仅作回滚备用：
 
 ```ini
 [Unit]
@@ -158,12 +194,8 @@ RestartSec=3
 WantedBy=default.target
 ```
 
-管理：
-
-```sh
-ssh yocto 'systemctl --user restart gproxy.service'
-ssh yocto 'journalctl --user -u gproxy.service -f'
-```
+回滚到裸进程：先 `docker-compose down`，再 `systemctl --user enable --now gproxy.service`。
+**同一时间只能有一个实例绑定 58881**，务必先停另一个。
 
 ### 坑：GPROXY_MASTER_KEY 与 plaintext 模式
 
@@ -183,7 +215,7 @@ Error: Encryption("store requires plaintext mode, but GPROXY_MASTER_KEY is set")
 | 端口 | 服务 |
 |---|---|
 | 58880 | trae-hub（本机上游） |
-| **58881** | **gproxy（现役）** |
+| **58881** | **gproxy（现役，docker 容器 `gproxy`）** |
 | 8088 | merged-proxy |
 | 80/443 | 反代 |
 

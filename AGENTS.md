@@ -71,15 +71,18 @@ Aliyun Caddy  (ai.debin.cc { reverse_proxy 127.0.0.1:56188 })
 frps  (8.130.17.158:57000)
    │
    ▼
-yocto frpc  (localPort = 58881)
+本机 frpc   (localIP=10.42.30.102, localPort=58881 → remotePort=56188)
    │
    ▼
-gproxy  @ yocto:58881   ← 本仓库产物
+gproxy  @ yocto:58881   ← 本仓库产物（docker 容器）
    │
    ├── zhipu     (open.bigmodel.cn)
    ├── aliyun    (token-plan.cn-beijing.maas.aliyuncs.com)
    └── trae-hub  (127.0.0.1:58880)
 ```
+
+> 隧道由 **本机 frpc** 承载（store 模式，映射存于 `/root/.config/frpc/db.json`）。
+yocto 侧原来的 frpc 容器已删除；`remotePort` 仍为 56188，Caddy 无需改动。
 
 ### 关键事实
 
@@ -87,13 +90,15 @@ gproxy  @ yocto:58881   ← 本仓库产物
 |---|---|
 | 部署主机 | `yocto`（10.42.30.102，Ubuntu 24.04，x86_64） |
 | 安装目录 | `/home/yocto/gproxy`（二进制 `bin/gproxy`，数据 `data/gproxy.db`） |
-| 服务 | `systemd --user` 单元 `gproxy.service`（enabled + linger + `Restart=always`） |
+| 运行方式 | **docker 容器 `gproxy`**（`network_mode: host`，supervisord 作为 PID 1，`restart: unless-stopped`） |
+| 镜像 / 编排 | `/home/yocto/gproxy/container/`（`Dockerfile`、`supervisord.conf`、`docker-compose.yml`） |
 | 监听端口 | **58881** |
 | 管理台 | `http://10.42.30.102:58881/admin`（用户 `admin`） |
 | 上游 trae-hub | 同机 58880 |
-| 其它容器 | `frpc`、`trae-hub`、`merged-proxy`、`x-kernel-jenkins` |
+| 其它容器 | `trae-hub`、`merged-proxy`、`x-kernel-jenkins` |
+| 旧 systemd 单元 | `/home/yocto/.config/systemd/user/gproxy.service`（已 stop + disable，仅作回滚） |
 
-### 环境变量（写在 `gproxy.service` 里）
+### 环境变量（写在 `docker-compose.yml` 的 `environment` 里）
 
 | 变量 | 说明 |
 |---|---|
@@ -110,7 +115,7 @@ gproxy  @ yocto:58881   ← 本仓库产物
 - 用户 API key（`sk-…`）→ 调 `/v1/*`。每个客户端一把（`sk-gp-*`，带 label）。
 - `GPROXY_MASTER_KEY` → 只用于封存数据库里的密钥，**不能用来调用 API**。
 
-### ⚠️ 两个已知陷阱
+### ⚠️ 已知陷阱
 
 1. **`GPROXY_MASTER_KEY` 必须在首次启动前设好。**
    若先以明文模式初始化，之后再加 key 会启动失败：
@@ -118,7 +123,10 @@ gproxy  @ yocto:58881   ← 本仓库产物
    补救：把 `data/` 改名留档、建空目录重启（会重新生成 admin 密码与 API key）。
 
 2. **`GPROXY_ADMIN_PASSWORD` 会覆盖现有密码。**
-   在 UI 里改过密码后，如果 unit 里的环境变量没同步改，重启会被改回去。
+   在 UI 里改过密码后，如果 compose/unit 里的环境变量没同步改，重启会被改回去。
+
+3. **同一时间只能有一个实例绑定 58881。**
+   容器与 systemd --user 单元同时启会端口冲突。切换时务必先停另一个。
 
 ---
 
@@ -137,7 +145,7 @@ scripts/local-deploy.sh --release  # 构建 + 部署 + 在 fork 上建 GitHub Re
 scripts/local-deploy.sh --help     # 全部选项
 ```
 
-脚本会：检查工具链 → （可选）构建前端 → zig 构建静态 musl → scp 到 yocto（先备份旧二进制，原子替换）→ 重启 `gproxy.service` → 健康检查。
+脚本会：检查工具链 → （可选）构建前端 → zig 构建静态 musl → scp 到 yocto（先备份旧二进制，原子替换）→ 重启远端运行实例（容器 / systemd 二选一自动识别）→ 健康检查。
 
 ### 手动构建（脚本内部做的事）
 
@@ -187,21 +195,23 @@ cargo zigbuild --locked --release -p gproxy-host-axum --target x86_64-unknown-li
 ```sh
 scp target/x86_64-unknown-linux-musl/release/gproxy yocto:/home/yocto/gproxy/bin/gproxy.tmp
 ssh yocto 'chmod 755 /home/yocto/gproxy/bin/gproxy.tmp && mv -f /home/yocto/gproxy/bin/gproxy.tmp /home/yocto/gproxy/bin/gproxy'
-ssh yocto 'systemctl --user restart gproxy.service'
+ssh yocto 'cd /home/yocto/gproxy/container && docker-compose up -d --force-recreate gproxy'
 ```
 
 运维命令：
 
 ```sh
-ssh yocto 'systemctl --user status  gproxy.service'
-ssh yocto 'systemctl --user restart gproxy.service'
-ssh yocto 'journalctl --user -u gproxy.service -f'
-ssh yocto '/home/yocto/gproxy/bin/gproxy --version'
+ssh yocto 'docker ps --filter name=gproxy'                 # 容器状态
+ssh yocto 'docker logs -f gproxy'                          # 日志
+ssh yocto 'docker exec gproxy supervisorctl status'        # gproxy 子进程状态
+ssh yocto 'docker restart gproxy'                          # 重启容器
+ssh yocto '/home/yocto/gproxy/bin/gproxy --version'        # 版本
 ```
 
-回滚：`bin/` 下保留了最近 5 份 `gproxy.bak-<时间戳>`，直接 `mv` 回去再重启即可。
+回滚：`bin/` 下保留了最近 5 份 `gproxy.bak-<时间戳>`，直接 `mv` 回去再 `docker-compose up -d --force-recreate` 即可。
+回滚到 systemd 裸进程：`docker-compose down` → `systemctl --user enable --now gproxy.service`（先停容器，避免端口冲突）。
 
-> yocto **没有外网**，所以只能 `scp` 静态二进制过去，不能在远端构建。
+> yocto 上**二进制由本机 scp 过去**（静态 musl），不在远端构建。
 
 ---
 
@@ -213,7 +223,6 @@ ssh yocto '/home/yocto/gproxy/bin/gproxy --version'
   **我们的 fork 不用它**——用 `scripts/local-deploy.sh --release` 直接上传本地 zig musl 产物到 fork 的 Release。
 
 ### 与 upstream 同步
-
 ```sh
 git fetch upstream
 git merge upstream/main        # 或 git rebase upstream/main

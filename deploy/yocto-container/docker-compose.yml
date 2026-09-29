@@ -1,0 +1,17 @@
+# gproxy 运行编排（supervisord 容器）
+#
+# 敏感变量放在同目录的 .env 里（git 忽略，chmod 600），不要写进本文件：
+#   GPROXY_UPDATE_CHANNEL_SERVE / GPROXY_HOST / GPROXY_PORT / GPROXY_DATA_DIR
+#   GPROXY_MASTER_KEY / GPROXY_ADMIN_USER / GPROXY_ADMIN_PASSWORD
+services:
+  gproxy:
+    image: gproxy-supervisor:latest
+    container_name: gproxy
+    network_mode: host
+    user: "1002:1002"
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - /home/yocto/gproxy/bin:/home/yocto/gproxy/bin:ro
+      - /home/yocto/gproxy/data:/home/yocto/gproxy/data
