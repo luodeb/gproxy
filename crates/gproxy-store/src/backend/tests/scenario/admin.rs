@@ -35,6 +35,44 @@ pub(super) async fn run(store: &Store, user_key: i64) -> Result<Outcome, StoreEr
         .expect("admin user");
     assert_eq!(admin.organization_id, Some(default_org.id));
     assert_eq!(admin.team_id, Some(default_team.id));
+    // An API-key-only service account: no password hash at all. Reading it back
+    // through a session or key lookup must not fail, and the empty hash must
+    // never verify against a guessed password.
+    let keyless = store
+        .insert_user(&crate::records::UserInput {
+            name: "keyless-service-account".into(),
+            organization_id: None,
+            team_id: None,
+            password_hash: None,
+            enabled: true,
+            is_admin: true,
+        })
+        .await?;
+    let keyless_digest = vec![11; 32];
+    store
+        .insert_user_key(&crate::records::UserKeyInput {
+            user_id: keyless,
+            digest: keyless_digest.clone(),
+            digest_version: 1,
+            prefix: "keyless-se".into(),
+            envelope: crate::records::CredentialEnvelope {
+                ciphertext: vec![1],
+                wrapped_key: vec![2],
+                payload_nonce: vec![3],
+                key_nonce: vec![4],
+            },
+            label: None,
+            expires_at: None,
+            enabled: true,
+        })
+        .await?;
+    let resolved = store
+        .admin_for_api_key(&keyless_digest, 150)
+        .await?
+        .expect("passwordless admin key resolves");
+    assert_eq!(resolved.id, keyless);
+    assert!(resolved.password_hash.is_empty());
+
     let token_digest = vec![9; 32];
     store
         .create_user_session(&UserSessionInput {

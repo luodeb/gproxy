@@ -45,6 +45,8 @@ pub(crate) struct HostState {
     pub announcements: crate::announce::Announcements,
     pub autostart: Option<Arc<crate::autostart::Manager>>,
     pub selfupdate: Option<Arc<crate::selfupdate::Manager>>,
+    /// Streamable-HTTP MCP endpoint exposing the admin API as tools.
+    pub mcp: gproxy_mcp::McpService,
     instance_id: u64,
     request_prefix: u64,
     request_counter: Arc<AtomicU64>,
@@ -54,6 +56,7 @@ impl HostState {
     fn new(app: gproxy_app::AppHandle, config: HostConfig) -> Result<Self, HostError> {
         let mut prefix = [0_u8; 8];
         getrandom::fill(&mut prefix).map_err(|_| HostError::Randomness)?;
+        let mcp = gproxy_mcp::McpService::new(app.clone());
         Ok(Self {
             app,
             requests: gproxy_app::ConcurrencyLimit::new(1024),
@@ -62,6 +65,7 @@ impl HostState {
             announcements: crate::announce::Announcements::new(),
             autostart: config.autostart,
             selfupdate: config.selfupdate,
+            mcp,
             instance_id: config.instance_id,
             request_prefix: u64::from_be_bytes(prefix),
             request_counter: Arc::new(AtomicU64::new(1)),

@@ -46,13 +46,15 @@ pub(super) fn key_parts(method: Method, uri: &str) -> http::request::Parts {
 }
 
 pub(super) fn admin_parts(method: Method, uri: &str) -> http::request::Parts {
+    bearer_parts(method, uri, admin_key())
+}
+
+/// Request parts carrying an arbitrary bearer token.
+pub(super) fn bearer_parts(method: Method, uri: &str, token: &str) -> http::request::Parts {
     let mut parts = http::Request::builder()
         .method(method)
         .uri(uri)
-        .header(
-            http::header::AUTHORIZATION,
-            format!("Bearer {}", admin_key()),
-        )
+        .header(http::header::AUTHORIZATION, format!("Bearer {token}"))
         .body(())
         .expect("request")
         .into_parts()

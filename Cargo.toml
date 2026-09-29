@@ -8,6 +8,7 @@ members = [
     "crates/gproxy-core",
     "crates/gproxy-host-axum",
     "crates/gproxy-host-edge",
+    "crates/gproxy-mcp",
     "crates/gproxy-protocol",
     "crates/gproxy-protocol-macros",
     "crates/gproxy-store",
@@ -36,6 +37,7 @@ gproxy-admin = { path = "crates/gproxy-admin", version = "=3.0.22" }
 gproxy-channel-api = { path = "crates/gproxy-channel-api", version = "=3.0.22" }
 gproxy-channels = { path = "crates/gproxy-channels", version = "=3.0.22" }
 gproxy-core = { path = "crates/gproxy-core", version = "=3.0.22" }
+gproxy-mcp = { path = "crates/gproxy-mcp", version = "=3.0.22" }
 gproxy-protocol = { path = "crates/gproxy-protocol", version = "=3.0.22" }
 gproxy-protocol-macros = { path = "crates/gproxy-protocol-macros", version = "=3.0.22" }
 gproxy-store = { path = "crates/gproxy-store", version = "=3.0.22" }
@@ -63,6 +65,7 @@ quote = "1"
 redis = { version = "1.6", default-features = false, features = ["connection-manager", "tokio-rustls-comp"] }
 rsa = { version = "0.9", features = ["sha2"] }
 regex = "1"
+rmcp = { version = "3.5", default-features = false, features = ["server", "transport-streamable-http-server"] }
 rust_decimal = { version = "1", features = ["serde"] }
 ruzstd = "0.9"
 semver = "1"
@@ -79,6 +82,7 @@ thiserror = "2"
 time = { version = "0.3", features = ["parsing"] }
 tiktoken-rs = "0.12"
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+tower = "0.5"
 tokio-postgres = "0.7"
 tokio-postgres-rustls = { version = "0.14", features = ["aws-lc-rs", "webpki-roots"] }
 tokenizers = { version = "0.23", default-features = false, features = ["onig"] }

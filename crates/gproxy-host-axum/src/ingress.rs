@@ -119,6 +119,42 @@ async fn handle_request(
     if let Some(response) = state.app.oauth_dispatch(&parts, body.clone()).await {
         return crate::response::buffered_response(response, permit, &request_id);
     }
+    // The MCP endpoint and the OpenAPI document sit under `/admin/api/`, so they
+    // must be handled before the generic admin dispatch below. Authentication is
+    // performed here as well: an MCP client sends no `Origin` header, so the
+    // write path is allowed just like a Bearer-authenticated admin key.
+    if path == gproxy_mcp::GATEWAY_MCP_PATH {
+        if let Err(response) = gproxy_admin::authorize_host_route(
+            &state.app,
+            &parts,
+            method != Method::GET && method != Method::HEAD,
+        )
+        .await
+        {
+            return crate::response::buffered_response(*response, permit, &request_id);
+        }
+        let request = Request::from_parts(parts, axum::body::Body::from(body));
+        // Streamed straight through: SSE responses must not be buffered.
+        return state.mcp.handle(request).await;
+    }
+    if path == gproxy_mcp::OPENAPI_PATH {
+        if let Err(response) = gproxy_admin::authorize_host_route(&state.app, &parts, false).await {
+            return crate::response::buffered_response(*response, permit, &request_id);
+        }
+        let body = match serde_json::to_vec(&state.mcp.openapi_json()) {
+            Ok(body) => body,
+            Err(error) => {
+                tracing::error!(%error, "failed to serialize the OpenAPI document");
+                return (StatusCode::INTERNAL_SERVER_ERROR, "internal error").into_response();
+            }
+        };
+        let mut response = http::Response::new(bytes::Bytes::from(body));
+        response.headers_mut().insert(
+            http::header::CONTENT_TYPE,
+            HeaderValue::from_static("application/json"),
+        );
+        return crate::response::buffered_response(response, permit, &request_id);
+    }
     if (path == "/admin/api" || path.starts_with("/admin/api/"))
         && let Some(response) = state.app.admin_dispatch(&parts, body.clone()).await
     {

@@ -20,6 +20,7 @@ futures-util.workspace = true
 getrandom.workspace = true
 gproxy-admin.workspace = true
 gproxy-app.workspace = true
+gproxy-mcp.workspace = true
 gproxy-channel-api.workspace = true
 gproxy-core.workspace = true
 gproxy-store.workspace = true

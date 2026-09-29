@@ -64,9 +64,9 @@ pub(crate) fn admin_for_session(token_digest: &[u8], now: i64) -> Result<Stateme
         .columns([
             (users.clone(), Alias::new("id")),
             (users.clone(), Alias::new("name")),
-            (users.clone(), Alias::new("password_hash")),
             (users.clone(), Alias::new("enabled")),
         ])
+        .expr_as(coalesced_password_hash(), Alias::new("password_hash"))
         .from(sessions.clone())
         .join(
             JoinType::InnerJoin,
@@ -111,9 +111,9 @@ pub(crate) fn admin_for_api_key(digest: &[u8], now: i64) -> Result<Statement, St
         .columns([
             (users.clone(), Alias::new("id")),
             (users.clone(), Alias::new("name")),
-            (users.clone(), Alias::new("password_hash")),
             (users.clone(), Alias::new("enabled")),
         ])
+        .expr_as(coalesced_password_hash(), Alias::new("password_hash"))
         .from(keys.clone())
         .join(
             JoinType::InnerJoin,
@@ -140,6 +140,15 @@ pub(crate) fn delete_user_session(token_digest: &[u8]) -> Result<Statement, Stor
         .from_table(Alias::new("user_sessions"))
         .and_where(Expr::col(Alias::new("token_digest")).eq(token_digest.to_vec()));
     Statement::query(&query)
+}
+
+fn coalesced_password_hash() -> sea_query::SimpleExpr {
+    // A user can be created without a password (an API-key-only service account).
+    // The column is then NULL, and selecting it as text would fail the row
+    // parse for *every* key or session lookup, not just that account. The empty
+    // string keeps the row readable; such an account can never satisfy
+    // `password::verify`, so it stays unable to log in.
+    Expr::col((Alias::new("users"), Alias::new("password_hash"))).if_null(Expr::value(""))
 }
 
 fn admin_select() -> sea_query::SelectStatement {

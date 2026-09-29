@@ -202,6 +202,11 @@ export default defineConfig({
               translations: { 'zh-CN': '路由与端点' },
             },
             {
+              label: 'Admin API & MCP',
+              slug: 'reference/admin-api',
+              translations: { 'zh-CN': '管理 API 与 MCP' },
+            },
+            {
               label: 'Pricing & Tiers',
               slug: 'reference/pricing',
               translations: { 'zh-CN': '价格与分层' },

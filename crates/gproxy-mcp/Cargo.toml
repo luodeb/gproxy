@@ -1,0 +1,18 @@
+[package]
+name = "gproxy-mcp"
+description = "In-process MCP control-plane server for gproxy"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+axum.workspace = true
+bytes.workspace = true
+gproxy-admin.workspace = true
+gproxy-app.workspace = true
+http.workspace = true
+percent-encoding.workspace = true
+rmcp.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
