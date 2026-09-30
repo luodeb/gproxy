@@ -1,14 +1,15 @@
 ---
 title: What is GPROXY?
-description: What GPROXY does, who it is for, how a request moves through it, and the concepts you will meet in the console.
+description: What GPROXY does, who it is for, how a request moves through it, and the concepts you will meet in the portal and the admin API.
 ---
 
 **GPROXY** is a self-hosted gateway for LLM APIs. Your clients call one base
 URL with one API key. GPROXY authenticates the key, picks an upstream provider
 and credential, converts the request when the client and the upstream speak
 different wire formats, applies your rules and spending limits, and records
-what every request cost. One binary serves the gateway, a public site at `/`,
-the operator console at `/admin`, and a user portal at `/portal`.
+what every request cost. One binary serves the gateway, a user portal at
+`/portal`, and an admin API at `/admin/api/**` with a built-in MCP server that
+lets an AI agent drive the same control plane.
 
 ## Who It Is For
 
@@ -82,7 +83,7 @@ first segment that matches nothing is treated as an aggregated path.
 | Credential | One secret in a provider's pool: an API key, an OAuth token pair, a session cookie, or service-account material. Carries a weight, RPM/TPM limits, proxy and fingerprint overrides, and an enable flag. Health is tracked per credential and model. |
 | Channel | The built-in adapter for one upstream family: how to authenticate, which paths exist, how tokens refresh, which routing defaults to seed. The binary ships 28 channel ids, from `openai` and `claudeapi` to `codex`, `aistudio`, `aws-bedrock`, and `custom`. |
 | Model | An upstream model recorded under a provider, with display name, context window, max output, thinking flags, and variants. Pulled from the provider or entered by hand. |
-| Route | A public model entry with members, each a provider plus an upstream model, ordered by tier (failover level) and weight (split inside a tier). The console calls routes load balancers. |
+| Route | A public model entry with members, each a provider plus an upstream model, ordered by tier (failover level) and weight (split inside a tier). The admin API exposes routes under `/admin/api/routes`. |
 | Alias | Another incoming model name that resolves to a target name, globally or for one provider, before routing. |
 | Variant | A suffix form of an exposed model, such as a thinking level or `-tier-*`, that maps to the base model and injects request fields. |
 | User API key | The key a client sends. It belongs to a user, who may belong to a team and an organization. Permissions, rate limits, and quotas attach at any of those scopes and are inherited downward. |
@@ -91,13 +92,13 @@ first segment that matches nothing is treated as an aggregated path.
 
 ## Deployment Choices
 
-- **Native binary.** One `gproxy` executable with the console embedded, for a
+- **Native binary.** One `gproxy` executable with the user portal embedded, for a
   server, a desktop, or a phone. Installers for Linux, macOS, Windows, and
   Android; portable archives for the same targets.
 - **Container.** `ghcr.io/leenhawk/gproxy:<tag>`, the same binary on
   `linux/amd64`, with its data directory at `/var/lib/gproxy`.
 - **Edge wasm.** Prebuilt bundles for Cloudflare Workers, Deno Deploy, and
-  Netlify Edge. libSQL holds the configuration; the console is served by the
+  Netlify Edge. libSQL holds the configuration; the web surface is served by the
   platform's static layer.
 - **Embedding.** `gproxy-core` is a Rust library. Another application can
   link it and call the same execute surface the hosts use. The crates are not
@@ -120,7 +121,7 @@ before pointing v3 at a v2 data directory.
 
 GPROXY does not host models or run inference. It is not a generic reverse
 proxy either: it parses LLM request bodies, rewrites streams, extracts token
-usage, and manages provider-specific authentication. The console and portal
+usage, and manages provider-specific authentication. The portal and the admin API
 are part of your deployment. GPROXY binds to `127.0.0.1` by default; exposing
 it, backing up the data directory, and guarding the master key are your
 responsibility.

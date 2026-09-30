@@ -1,6 +1,6 @@
 ---
 title: Adding a Channel
-description: "How a built-in channel is structured, the Channel contract it implements, where it is registered, and what the console picks up without new UI"
+description: "How a built-in channel is structured, the Channel contract it implements, where it is registered, and what the admin API exposes without new UI"
 ---
 
 A channel is the adapter for one upstream family: it knows the URLs, how to
@@ -59,16 +59,16 @@ ignore optional profiles.
 
 ## Declared Fields
 
-The console has no channel-specific screens. Everything it renders for a
+The admin API has no channel-specific screens. Everything exposed for a
 channel comes from the descriptor through `GET /admin/api/channels`:
 
 | Field | Purpose |
 | --- | --- |
 | `provider_fields` | Typed provider settings. Controls: `text`, `secret`, `url`, `integer`, `boolean`, `string_list`, `select` (with `options` and `default_value`); `required` and `advanced` flags. |
 | `credential_fields` | The secret's shape when a credential is pasted: `api_key`; `access_token` and `refresh_token`; service-account fields. |
-| `endpoint_overrides` | Whether the Settings tab offers per-operation endpoint URL overrides; the keys come from `endpoint_override_key`. |
+| `endpoint_overrides` | Whether per-operation endpoint URL overrides are offered; the keys come from `endpoint_override_key`. |
 | `traffic_policy` | Request headers, response headers and query parameters the channel forwards; operators may override them per provider. |
-| `login` | Modes and parameters for the credential wizard. |
+| `login` | Modes and parameters for the credential login flows. |
 
 Reuse the field sets in `crates/gproxy-channels/src/metadata.rs`
 (`BASE_URL`, `OPENAI_CACHE`, `CLAUDE`, `API_KEY`, `OAUTH`,
@@ -150,8 +150,8 @@ truth is the vendor's API documentation, not another channel's code.
 4. Add the locale entries for any new field keys.
 
 Nothing else is required: provider creation seeds routing rules from
-`routing_table()`, the Providers page lists the channel, and the credential
-wizard follows `login()`.
+`routing_table()`, `GET /admin/api/channels` lists the channel, and the
+credential login flows follow `login()`.
 
 ## Tests
 

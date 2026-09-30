@@ -3,7 +3,7 @@ title: "Users & API Keys"
 description: "Organizations, teams, users, and API keys; the administrator account, the user portal, admin API access, and how a key is sent"
 ---
 
-Gateway traffic authenticates as a user through a user API key. The console
+Gateway traffic authenticates as a user through a user API key. The admin API
 and the portal authenticate with a username and password and a server-side
 session.
 
@@ -11,8 +11,8 @@ session.
 Organization
 `-- Team
     `-- User
-        |-- password    optional; console or portal login
-        |-- is_admin    grants /admin and the admin API
+        |-- password    optional; portal login
+        |-- is_admin    grants the admin API
         `-- API keys    gateway traffic
 ```
 
@@ -24,8 +24,8 @@ at any level and are inherited downward; see
 ## The Administrator
 
 The administrator is an ordinary user with a password and `is_admin`. On a
-fresh store the console shows a setup page that creates it. Alternatively seed
-it from the environment:
+fresh store `POST /admin/api/setup` creates it with a username and password.
+Alternatively seed it from the environment:
 
 ```sh
 GPROXY_ADMIN_USER=admin            # default
@@ -45,8 +45,9 @@ secret reveal is recorded in the admin action audit.
 
 ## Creating Users
 
-In **Identity**, create an organization, optionally a team inside it, then a
-user. A user has a name, an optional organization and team, an enabled flag,
+In the admin API, create an organization (`POST /admin/api/organizations`),
+optionally a team inside it (`POST /admin/api/teams`), then a
+user (`POST /admin/api/users`). A user has a name, an optional organization and team, an enabled flag,
 the administrator role, and an optional password. Leave the password blank on
 edit to keep the current one.
 
@@ -62,7 +63,8 @@ A key is created for one user with:
 | Enabled | Disabled keys are rejected. |
 
 The full key has the shape `sk-gp-<43 url-safe characters>`. It is shown
-once at creation. Lists show the first 12 characters. **Reveal key** returns
+once at creation. Lists show the first 12 characters.
+`POST /admin/api/user-keys/<id>/reveal` returns
 the full key again for keys whose sealed material is stored, and is an
 audited action (`user_key.reveal`). Keys imported by digest only cannot be
 revealed.

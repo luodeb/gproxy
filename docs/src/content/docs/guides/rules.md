@@ -3,7 +3,7 @@ title: Routing Rules & Rule Sets
 description: "Rule sets mutate provider-native requests and responses; routing rules decide how each provider serves an operation and inbound protocol"
 ---
 
-GPROXY has two rule mechanisms. Both are edited in the console and both live
+GPROXY has two rule mechanisms. Both are edited through the admin API and both live
 in the control plane:
 
 - **Rule sets** are reusable, ordered lists of mutation rules. A set is
@@ -14,9 +14,10 @@ in the control plane:
   protocol they say whether the provider passes the request through,
   transforms it to another wire format, answers it locally, or refuses it.
 
-The global **Rules** workspace (`/admin/rules`) edits rule sets and their
-attachments. A provider's **Rules** tab edits the same objects scoped to that
-provider and offers presets; its **Routing** tab edits routing rules.
+Rule sets and their attachments are edited through `/admin/api/rule-sets`,
+`/admin/api/rules` and `/admin/api/provider-rule-sets`; routing rules through
+`/admin/api/routing-rules`. `GET /admin/api/rule-presets` lists the
+compatibility presets.
 
 ## Where Rules Run
 
@@ -127,7 +128,7 @@ are object keys or numeric array indexes (`messages.0.content`).
 | `delete` | Removes the key or array element; a missing path is skipped. |
 | `merge` | Shallow-merges an object `value` into the existing object at the path. |
 
-The console's model-variant editor stores variants as `rewrite`/`set` rules
+A model-variant behaviour is stored as a `rewrite`/`set` rule
 whose model filter is the variant name, so a thinking-level variant is just
 a rule you can inspect.
 
@@ -167,7 +168,7 @@ Sets or merges an outgoing request header.
 `override` (default) replaces the header. `merge` appends a comma-separated
 value and skips it when already present. Header rules run before the
 provider's forwarded-metadata policy, so the header must be one the channel
-forwards (**Providers → Settings → Forwarded metadata**).
+forwards (the provider's `traffic_policy` / forwarded-metadata setting).
 
 ### Fixed Apply Order
 
@@ -177,7 +178,7 @@ system_text -> cache_breakpoint -> rewrite -> transform -> header
 
 Order is by kind first, regardless of which set a rule came from. Within a
 kind, attached sets run in attachment order and rules in `sort_order`. The
-console shows the resulting "Effective #" beside each rule.
+effective order follows from those two keys.
 
 ### Attaching Sets to Providers
 
@@ -188,14 +189,13 @@ attachment count. A set cannot be deleted while it still has rules or
 attachments.
 
 Creating a provider also creates and attaches an empty private set named
-`<provider> · defaults`. The console writes model-variant rules there; you
+`<provider> · defaults`. Model-variant rules are written there; you
 may add your own rules to it as well.
 
 ### Presets
 
-`GET /admin/api/rule-presets` lists presets; a provider's Rules tab applies
-one with **Apply compatibility preset**
-(`POST /admin/api/providers/<id>/rule-presets/<preset>`). Applying creates
+`GET /admin/api/rule-presets` lists presets; apply one to a provider with
+`POST /admin/api/providers/<id>/rule-presets/<preset>`. Applying creates
 or updates an ordinary set named `<preset> compatibility`, attaches it and
 leaves it editable. Applying again refreshes the rules in place.
 
@@ -243,8 +243,8 @@ inbound `kind`: a wire family or a content-generation protocol, for example
 ### Channel Defaults and Operator Rows
 
 Each channel declares a default table in code. Creating a provider seeds one
-row per entry with origin `channel_default`; the console shows these rows
-muted and labels them **Inherited**. Editing a row, adding one or deleting
+row per entry with origin `channel_default`; `GET /admin/api/routing-rules`
+reports each row's origin. Editing a row, adding one or deleting
 one turns it into an operator row. Startup backfills new channel defaults
 for existing providers without touching rows that already exist.
 

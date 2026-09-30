@@ -7,22 +7,38 @@ use rust_decimal::Decimal;
 use serde_json::json;
 
 #[tokio::test]
-async fn admin_pages_fall_back_to_console_while_api_remains_namespaced() {
+async fn portal_pages_serve_the_shell_while_admin_pages_redirect() {
     let fixture = fixture::Fixture::start().await;
-    let client = wreq::Client::builder().build().expect("downstream client");
+    let client = wreq::Client::builder()
+        .no_proxy()
+        .build()
+        .expect("downstream client");
 
-    let page = client
-        .get(fixture.url("/admin/providers"))
+    // The portal owns the HTML surface; every section is a real bookmarkable URL.
+    for path in ["/portal", "/portal/keys", "/portal/usage"] {
+        let page = client
+            .get(fixture.url(path))
+            .send()
+            .await
+            .expect("portal page request");
+        assert_eq!(page.status(), http::StatusCode::OK, "{path}");
+        assert_eq!(
+            page.headers().get(http::header::CONTENT_TYPE),
+            Some(&http::HeaderValue::from_static("text/html"))
+        );
+        let document = page.text().await.expect("portal document");
+        assert!(document.contains("<div id=\"root\"></div>"), "{path}");
+    }
+
+    // The operator console was replaced by the MCP control plane. Old admin
+    // bookmarks keep working by landing on the portal instead of 404ing.
+    let legacy = client
+        .request(http::Method::GET, fixture.url("/admin/providers"))
         .send()
         .await
-        .expect("console page request");
-    assert_eq!(page.status(), http::StatusCode::OK);
-    assert_eq!(
-        page.headers().get(http::header::CONTENT_TYPE),
-        Some(&http::HeaderValue::from_static("text/html"))
-    );
-    let document = page.text().await.expect("console document");
-    assert!(document.contains("<div id=\"root\"></div>"));
+        .expect("legacy admin bookmark");
+    assert_eq!(legacy.status(), http::StatusCode::FOUND);
+    assert_eq!(legacy.headers()[http::header::LOCATION], "/portal");
 
     let api = client
         .get(fixture.url("/admin/api/session"))

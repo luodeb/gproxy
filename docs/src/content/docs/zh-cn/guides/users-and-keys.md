@@ -3,15 +3,15 @@ title: "用户与 API 密钥"
 description: "组织、团队、用户与 API 密钥；管理员账户、用户门户、管理 API 访问，以及密钥如何随请求发送"
 ---
 
-网关流量通过用户 API 密钥认证为某个用户。控制台与门户使用用户名和密码登录，
+网关流量通过用户 API 密钥认证为某个用户。管理 API 与门户使用用户名和密码登录，
 并由服务端会话维持。
 
 ```text
 Organization
 `-- Team
     `-- User
-        |-- password    optional; console or portal login
-        |-- is_admin    grants /admin and the admin API
+        |-- password    optional; portal login
+        |-- is_admin    grants the admin API
         `-- API keys    gateway traffic
 ```
 
@@ -21,8 +21,8 @@ Organization
 
 ## 管理员
 
-管理员是一个带密码和 `is_admin` 的普通用户。在全新的存储上，控制台会显示
-初始化页面来创建它。也可以通过环境变量预置：
+管理员是一个带密码和 `is_admin` 的普通用户。在全新的存储上，`POST /admin/api/setup`
+用用户名和密码创建它。也可以通过环境变量预置：
 
 ```sh
 GPROXY_ADMIN_USER=admin            # default
@@ -42,7 +42,8 @@ GPROXY_BOOTSTRAP_CHANNELS=codex,claudecode   # optional; creates one provider pe
 
 ## 创建用户
 
-在 **身份** 中先创建组织，可选地在其中创建团队，然后创建用户。用户有名称、
+在管理 API 中先创建组织（`POST /admin/api/organizations`），可选地在其中创建团队
+（`POST /admin/api/teams`），然后创建用户（`POST /admin/api/users`）。用户有名称、
 可选的组织和团队、启用标记、管理员角色和可选密码。编辑时密码留空即保持不变。
 
 ## 签发密钥
@@ -57,8 +58,9 @@ GPROXY_BOOTSTRAP_CHANNELS=codex,claudecode   # optional; creates one provider pe
 | 启用 | 禁用的密钥会被拒绝。 |
 
 完整密钥形如 `sk-gp-<43 个 URL 安全字符>`，只在创建时显示一次。列表显示前
-12 个字符。**显示密钥** 会再次返回完整密钥，前提是其密封材料已存储；这是一
-项会被审计的操作（`user_key.reveal`）。仅以摘要导入的密钥无法显示。
+12 个字符。`POST /admin/api/user-keys/<id>/reveal` 会再次返回完整密钥，前提是其
+密封材料已存储；这是一项会被审计的操作（`user_key.reveal`）。仅以摘要导入的
+密钥无法显示。
 
 密钥按摘要查找。摘要算法带版本号，可以在不作废已存密钥的前提下更换；版本 1
 是对密钥载荷的 SHA-256。以本二进制不支持的版本存储的密钥会被忽略。

@@ -16,8 +16,7 @@ SignPath Foundation 申请正在等待审核，已有下载不会自动补签。
 v2 版本仍保留在各自的 `v2.x.y` tag 上。
 :::
 
-不要为了运行 GPROXY 而克隆仓库或自行编译。下面的产物已经包含优化后的二进制和内嵌
-控制台。从源码构建见[构建与发布](/zh-cn/deployment/release-build/)。
+不要为了运行 GPROXY 而克隆仓库或自行编译。下面的产物已经包含优化后的二进制和内嵌的用户门户。从源码构建见[构建与发布](/zh-cn/deployment/release-build/)。
 
 ## 产物命名
 
@@ -45,7 +44,7 @@ Linux GNU 版本链接 glibc；`-musl` 版本是静态链接。Windows 版本静
 | 安装包 | 平台 | 作用 |
 | --- | --- | --- |
 | `.deb` | Debian 与 Ubuntu 系 | 安装 `/usr/bin/gproxy`、桌面启动器和一个 XDG 自动启动项。 |
-| `.dmg` | macOS 11 或更高 | `GPROXY.app` 应用包，在后台运行服务并打开控制台。 |
+| `.dmg` | macOS 11 或更高 | `GPROXY.app` 应用包，在后台运行服务并打开门户。 |
 | `.msix` | Windows 10 2004 或更高版本 | 由商店管理安装，带开始菜单入口、私有数据目录和 Windows 启动任务；尚未上架商店。 |
 | `.apk` | Android 9（API 28）或更高 | 已签名的应用，包含前台服务、启动器界面和应用内更新。 |
 
@@ -81,9 +80,9 @@ docker pull ghcr.io/leenhawk/gproxy:<tag>
 
 | 产物 | 内容 |
 | --- | --- |
-| `gproxy-edge-cloudflare.zip` | Cloudflare Workers 项目：Worker 入口、`wrangler.toml`、wasm 包、控制台资源。 |
-| `gproxy-edge-deno.zip` | Deno Deploy 项目：`main.ts`、`deno.json`、wasm 包、控制台资源。 |
-| `gproxy-edge-netlify.zip` | Netlify Edge 项目：Edge Function、`netlify.toml`、wasm 包、控制台资源。 |
+| `gproxy-edge-cloudflare.zip` | Cloudflare Workers 项目：Worker 入口、`wrangler.toml`、wasm 包、门户资源。 |
+| `gproxy-edge-deno.zip` | Deno Deploy 项目：`main.ts`、`deno.json`、wasm 包、门户资源。 |
+| `gproxy-edge-netlify.zip` | Netlify Edge 项目：Edge Function、`netlify.toml`、wasm 包、门户资源。 |
 | `gproxy-edge.wasm` | 原始的 `wasm32-unknown-unknown` 构建，供自定义宿主使用。 |
 
 请直接上传 Bundle，不要让平台编译 Rust。见 [Edge Wasm](/zh-cn/deployment/edge/)。

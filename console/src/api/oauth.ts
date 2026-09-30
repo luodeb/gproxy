@@ -1,18 +1,10 @@
-import type { IdResponse } from "@/generated/IdResponse"
 import type { OAuthAuthorizationRequest } from "@/generated/OAuthAuthorizationRequest"
 import type { OAuthAuthorizeDecision } from "@/generated/OAuthAuthorizeDecision"
-import type { OAuthClientDto } from "@/generated/OAuthClientDto"
-import type { OAuthClientWriteRequest } from "@/generated/OAuthClientWriteRequest"
 import type { OAuthConsentDto } from "@/generated/OAuthConsentDto"
 import type { OAuthDeviceDecision } from "@/generated/OAuthDeviceDecision"
 import type { OAuthErrorDto } from "@/generated/OAuthErrorDto"
 import type { OAuthRedirectDto } from "@/generated/OAuthRedirectDto"
-import { ApiError, api, json } from "@/api/client"
-
-export const oauthClients = (signal?: AbortSignal) => api<Array<OAuthClientDto>>("/admin/api/oauth-clients", { signal })
-export const createOAuthClient = (value: OAuthClientWriteRequest) => api<IdResponse>("/admin/api/oauth-clients", json("POST", value))
-export const updateOAuthClient = (id: number, value: OAuthClientWriteRequest) => api<void>(`/admin/api/oauth-clients/${id}`, json("PATCH", value))
-export const deleteOAuthClient = (id: number) => api<void>(`/admin/api/oauth-clients/${id}`, { method: "DELETE" })
+import { ApiError, json } from "@/api/client"
 
 async function oauthApi<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, { ...init, credentials: "same-origin", cache: "no-store" })

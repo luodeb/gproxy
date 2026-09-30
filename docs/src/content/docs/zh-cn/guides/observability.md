@@ -4,7 +4,8 @@ description: "用量行与小时汇总、带分级捕获与脱敏的请求审计
 ---
 
 GPROXY 把运维数据写入持久化后端，因此共用同一数据库的所有实例共享同一视图。
-控制台在 **统计** 下读取这些数据：用量、管理操作与请求审计三个标签页。
+管理 API 读取这些数据：`usage` 与 `usage-records` 给出 token 与成本，`logs` 给出
+请求审计，`audit` 给出管理操作。
 
 ## 请求 ID
 
@@ -33,8 +34,8 @@ GPROXY 把运维数据写入持久化后端，因此共用同一数据库的所�
 | `ended` | `complete`，或客户端挂断、流中断时为 `interrupted`。 |
 | `latency_ms` | 交换的墙钟时间。 |
 
-汇总以小时、Provider、组织、团队、用户、上游模型和维度为键；概览趋势读取的
-就是它。关闭 `enable_usage` 会停止持久化用量行；准入、结算与配额对账仍然运行。
+汇总以小时、Provider、组织、团队、用户、上游模型和维度为键；`GET /admin/api/usage-trend`
+读取的就是它。关闭 `enable_usage` 会停止持久化用量行；准入、结算与配额对账仍然运行。
 
 ### 查询用量
 
@@ -42,8 +43,8 @@ GPROXY 把运维数据写入持久化后端，因此共用同一数据库的所�
 为 `user_key`、`user`、`provider` 或 `model`；不指定时返回每个不同的维度组
 合。过滤条件：`user_key_id`、`user_id`、`provider_id`、`credential_id`、
 `model`。每行报告请求数、输入、输出与缓存 Token、5 分钟、30 分钟和 1 小时的缓
-存写入以及成本。控制台的用量标签页提供同样的过滤条件加日期范围，并在
-**用量与成本** 和 **配额窗口** 之间切换。`GET /admin/api/usage-trend?from&to`
+存写入以及成本。`gproxy_usage` MCP 工具提供同样的过滤条件，并可聚合、分页、汇总或
+趋势查询；`GET /admin/api/quota-windows` 列出同一批数据支撑的配额窗口。`GET /admin/api/usage-trend?from&to`
 返回每小时的数据点。
 
 成本、Token 和维度回答的是不同的问题：成本是计价后的实际计费；Token 是
@@ -52,11 +53,9 @@ Provider 或估算器给出的计数；指标与维度承载 Token 之外的一�
 
 ### 删除用量明细
 
-在用量标签页点击 **批量**，选中记录后点击 **删除** 并确认。删除后会刷新
-列表与基于明细的统计。管理 API 也支持 `DELETE /admin/api/usage/{id}`，以及
-携带 `{"action":"delete","ids":[1,2]}` 的 `POST /admin/api/batch/usage`。
-删除操作会写入管理审计，不退还已结算费用、不重置配额，也不删除概览趋势和
-计费所用的历史小时汇总。
+用 `DELETE /admin/api/usage/{id}`，或携带 `{"action":"delete","ids":[1,2]}` 的
+`POST /admin/api/batch/usage` 删除记录。删除会写入管理审计，不退还已结算费用、
+不重置配额，也不删除用量趋势和计费所用的历史小时汇总。
 
 ## 请求审计
 
@@ -77,9 +76,7 @@ Provider 或估算器给出的计数；指标与维度承载 Token 之外的一�
 `GET /admin/api/logs?start&end` 列出捕获的请求，过滤条件有 `user_id`、
 `user_key_id`、`provider_id`、`status`、`request_id`，以及 `cursor` 和
 `limit`（1 到 100，默认 50）。`GET /admin/api/logs/<request_id>` 返回下游记录
-和按顺序排列的上游尝试。在控制台中，**请求审计** 在
-`/admin/logs/<request_id>` 打开每条请求，请求头和请求体可复制；未捕获的字段
-会明确标出。
+和按顺序排列的上游尝试，请求头和请求体可复制；未捕获的字段会明确标出。
 
 客户端 IP 取对端地址；若对端是环回地址或列在 `GPROXY_TRUSTED_PROXIES` 中，则
 取 `X-Forwarded-For` 的第一项或 `X-Real-IP`。
@@ -95,8 +92,8 @@ Provider 或估算器给出的计数；指标与维度承载 Token 之外的一�
   `signature`、`code_verifier`、`state` 等）被替换；嵌套对象与数组会被遍历。
 - 超过 100 MiB 的请求体被截断并加标记。
 
-`disable_log_redaction` 是显式的明文覆盖。控制台把它标红，因为此时凭证、
-Cookie 和用户内容会按原样写入数据库。登录路径（`/oauth/*`、设备授权回调、
+`disable_log_redaction` 是显式的明文覆盖。开启后，凭证、Cookie 和用户内容会
+按原样写入数据库。登录路径（`/oauth/*`、设备授权回调、
 `/portal/api/login`、`/portal/api/password`）即便开启覆盖也始终脱敏。
 
 ## 保留与容量压力
@@ -121,21 +118,22 @@ Cookie 和用户内容会按原样写入数据库。登录路径（`/oauth/*`、
 类型与 id、时间以及客户端 IP。登录事件 `auth.setup`、`auth.login` 与
 `auth.logout` 也会记录。读操作与配置导出不审计。
 
-`GET /admin/api/audit?limit` 返回最新的事件（默认 100，最多 500）。
-**管理操作** 标签页显示最新的 500 条，含操作者名称、IP、动作与目标，并支持文
-本搜索。
+`GET /admin/api/audit?limit` 返回最新的事件（默认 100，最多 500），每条含操作
+者名称、IP、动作与目标。
 
 ## 凭证健康与配额周期
 
 健康按凭证与上游模型跟踪，状态为 `healthy`、`degraded` 或 `dead`，并带有观察
-到的状态码、详情字符串与时间。概览列出不健康的已启用凭证；凭证卡片显示按模型
-的行并提供重置（`POST /admin/api/credentials/<id>/health-reset`）。重置只清除
+到的状态码、详情字符串与时间。`GET /admin/api/credentials` 暴露不健康的已启用
+凭证的按模型行；用
+`POST /admin/api/credentials/<id>/health-reset` 重置。重置只清除
 记录的状态；仍在失败的上游会在下一次尝试时再次降级该凭证。
 
 随响应返回或来自配额探测的上游配额窗口会持久化为凭证周期：窗口键与标签、周
 期起止、已用与上限、边界是由上游报告还是推断得出、周期是开放还是已关闭。
-`GET /admin/api/credential-cycles?from&to[&credential_id]` 列出它们；用量标签
-页和概览的配额压力卡片（达到或超过 80% 的窗口）读取同一批数据。
+`GET /admin/api/credential-cycles?from&to[&credential_id]` 列出它们；
+`GET /admin/api/quota-windows` 返回同一批窗口，配额压力集合（达到或超过 80% 的窗口）
+即由此得出。
 `POST /admin/api/credentials/<id>/quota-probe` 按需刷新某个凭证的窗口。
 
 ## 进程日志

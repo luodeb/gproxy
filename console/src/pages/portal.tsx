@@ -1,22 +1,20 @@
-import { useEffect, useState } from "react"
-import { useQueries, useQueryClient } from "@tanstack/react-query"
-import { useTranslation } from "react-i18next"
+import { lazy, Suspense, useEffect, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import type { PortalContextDto } from "@/generated/PortalContextDto"
-import {
-  portalLogin,
-  portalLogout,
-  portalModels,
-  portalQuotaWindows,
-  portalRecentRequests,
-  portalUsage,
-  portalSession,
-} from "@/api/portal"
+import { portalLogin, portalLogout, portalSession } from "@/api/portal"
 import { AuthPanel } from "@/components/auth/auth-panel"
-import { PortalDashboard } from "@/components/portal/portal-dashboard"
 import { PortalShell } from "@/components/portal/portal-shell"
+import { PortalSessionProvider } from "@/components/portal/portal-session"
 import { OAuthConsent } from "@/components/portal/oauth-consent"
+import { QueryState } from "@/components/query-state"
 import { oauthReturnUrl } from "@/lib/oauth-callback"
-import type { UsageDays } from "@/components/portal/usage-panel"
+import { usePortalLocation } from "@/lib/portal-route"
+
+const OverviewPage = lazy(() => import("@/pages/portal/overview").then((module) => ({ default: module.PortalOverviewPage })))
+const ConnectPage = lazy(() => import("@/pages/portal/connect").then((module) => ({ default: module.PortalConnectPage })))
+const UsagePage = lazy(() => import("@/pages/portal/usage").then((module) => ({ default: module.PortalUsagePage })))
+const KeysPage = lazy(() => import("@/pages/portal/keys").then((module) => ({ default: module.PortalKeysPage })))
+const SessionsPage = lazy(() => import("@/pages/portal/sessions").then((module) => ({ default: module.PortalSessionsPage })))
 
 type PortalSession = { context: PortalContextDto }
 
@@ -27,44 +25,16 @@ function continueOAuth() {
 }
 
 export function PortalPage() {
-  const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const { route } = usePortalLocation()
   const [session, setSession] = useState<PortalSession | null>(null)
   const [sessionLoading, setSessionLoading] = useState(true)
   const [loginPending, setLoginPending] = useState(false)
   const [loginFailed, setLoginFailed] = useState(false)
-  const [usageDays, setUsageDays] = useState<UsageDays>(7)
   const params = new URLSearchParams(window.location.search)
   const authorization = params.get("oauth_authorize")
   const deviceCode = params.get("oauth_device")
   const authorizing = authorization != null || deviceCode != null
-  const authenticated = session != null
-  const recentEnabled = session?.context.recent_requests_enabled ?? false
-  const [modelsQuery, usageQuery, quotaQuery, recentQuery] = useQueries({ queries: [
-    {
-      queryKey: ["portal", "models"],
-      queryFn: ({ signal }) => portalModels(signal),
-      enabled: authenticated && !authorizing,
-    },
-    {
-      queryKey: ["portal", "usage", usageDays],
-      queryFn: ({ signal }) => {
-        const to = Math.floor(Date.now() / 1_000) + 1
-        return portalUsage({ from: to - usageDays * 86_400, to }, signal)
-      },
-      enabled: authenticated && !authorizing,
-    },
-    {
-      queryKey: ["portal", "quota-windows"],
-      queryFn: ({ signal }) => portalQuotaWindows(signal),
-      enabled: authenticated && !authorizing,
-    },
-    {
-      queryKey: ["portal", "recent-requests"],
-      queryFn: ({ signal }) => portalRecentRequests({ limit: 20 }, signal),
-      enabled: authenticated && !authorizing && recentEnabled,
-    },
-  ] })
 
   useEffect(() => {
     void portalSession()
@@ -95,13 +65,15 @@ export function PortalPage() {
     try {
       await portalLogout()
       queryClient.clear()
-      window.location.assign("/")
+      window.location.assign("/portal")
     } catch {
       return
     }
   }
 
-  if (sessionLoading) return <PortalShell context={null}><p>{t("portal.login.checking")}</p></PortalShell>
+  if (sessionLoading) {
+    return <main className="mx-auto max-w-2xl px-5 py-16"><QueryState loading error="">{null}</QueryState></main>
+  }
 
   if (!session) {
     return (
@@ -115,27 +87,17 @@ export function PortalPage() {
     )
   }
 
+  if (authorizing) {
+    return <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"><OAuthConsent authorization={authorization} deviceCode={deviceCode} /></main>
+  }
+
+  const page = { overview: <OverviewPage />, connect: <ConnectPage />, usage: <UsagePage />, keys: <KeysPage />, sessions: <SessionsPage /> }[route]
+
   return (
-      <PortalShell context={session.context} onLogout={() => void logout()}>
-      {authorizing ? <OAuthConsent authorization={authorization} deviceCode={deviceCode} /> : <PortalDashboard
-        context={session.context}
-        apiKey={t("portal.connect.keyPlaceholder")}
-        origin={window.location.origin}
-        models={modelsQuery.data ?? []}
-        modelsLoading={modelsQuery.isLoading}
-        modelsError={modelsQuery.isError}
-        usage={usageQuery.data}
-        usageDays={usageDays}
-        usageLoading={usageQuery.isLoading}
-        usageError={usageQuery.isError}
-        quotaWindows={quotaQuery.data ?? []}
-        quotaLoading={quotaQuery.isLoading}
-        quotaError={quotaQuery.isError}
-        recentRequests={recentQuery.data ?? []}
-        recentLoading={recentQuery.isLoading}
-        recentError={recentQuery.isError}
-        onUsageDaysChange={setUsageDays}
-      />}
-    </PortalShell>
+    <PortalSessionProvider value={{ context: session.context, logout: () => void logout() }}>
+      <PortalShell route={route}>
+        <Suspense fallback={<QueryState loading error="">{null}</QueryState>}>{page}</Suspense>
+      </PortalShell>
+    </PortalSessionProvider>
   )
 }

@@ -35,8 +35,9 @@ docker run -d --name gproxy \
   ghcr.io/leenhawk/gproxy:v3.0.0
 ```
 
-打开 `http://127.0.0.1:8787/admin`。全新的 store 会显示初始化表单，用于创建第一个
-管理员；之后同一地址就是登录页。若不想通过表单创建管理员，传入首次运行变量：
+打开 `http://127.0.0.1:8787/portal`。全新的 store 会在 `GET /admin/api/session` 中
+报告 `setup_required: true`；用 `POST /admin/api/setup` 传入用户名和密码创建第一个
+管理员。若不想调用该接口，传入首次运行变量：
 
 ```sh
 docker run -d --name gproxy \
@@ -47,8 +48,8 @@ docker run -d --name gproxy \
   ghcr.io/leenhawk/gproxy:v3.0.0
 ```
 
-在全新 store 上，这会创建管理员和一个已加密保存的管理员 API 密钥，可在控制台中
-查看。`GPROXY_BOOTSTRAP_ADMIN_API_KEY` 可自行指定该密钥，`GPROXY_BOOTSTRAP_CHANNELS`
+在全新 store 上，这会创建管理员和一个已加密保存的管理员 API 密钥，可用
+`POST /admin/api/user-keys/<id>/reveal` 查看。`GPROXY_BOOTSTRAP_ADMIN_API_KEY` 可自行指定该密钥，`GPROXY_BOOTSTRAP_CHANNELS`
 会按 channel id 各创建一个空 Provider；二者在全新 store 上都需要
 `GPROXY_ADMIN_PASSWORD`。只要 `GPROXY_ADMIN_PASSWORD` 仍然设置着，每次启动都会重新
 应用该管理员的密码，因此登录成功后请移除它。
@@ -133,7 +134,7 @@ services:
 | 变量 | 作用 |
 | --- | --- |
 | `GPROXY_TRUSTED_PROXIES` | 逗号分隔的 IP 地址（不是 CIDR 网段）。当 TCP 对端是 loopback 或列表中的地址时，取 `X-Forwarded-For` 的第一项、否则取 `X-Real-IP` 作为客户端 IP，用于登录限流和审计。来自其他对端时忽略这些 header。 |
-| `GPROXY_CORS_ORIGINS` | 允许携带凭据跨站调用 API 的精确浏览器 origin。留空表示仅同源；控制台和门户由网关自身提供时这已足够。 |
+| `GPROXY_CORS_ORIGINS` | 允许携带凭据跨站调用 API 的精确浏览器 origin。留空表示仅同源；门户由网关自身提供时这已足够。 |
 
 在 compose 网络上给代理容器分配固定地址，才能把它列入其中。为 WebSocket 客户端
 转发 `Upgrade` 和 `Connection` header，为流式响应关闭响应缓冲，并允许最大 100 MiB
@@ -210,9 +211,9 @@ docker buildx build \
 | `GPROXY_VERSION`、`GPROXY_REVISION` | 未设置 | OCI 镜像 label |
 | `CARGO_NET_OFFLINE` | `false` | 从预热的 cargo 缓存构建 |
 
-构建不需要预先编译控制台；第一阶段会编译它。
+构建不需要预先编译 Web 资源；第一阶段会编译它。
 `docker buildx build -f deploy/container/Dockerfile --target console-dist --output type=local,dest=dist/console .`
-只导出控制台 bundle。release workflow 使用 pnpm 构建控制台，打包容器镜像时复用
+只导出门户 bundle。release workflow 使用 pnpm 构建前端，打包容器镜像时复用
 原生 Linux 二进制。
 
 ## 离线传输镜像

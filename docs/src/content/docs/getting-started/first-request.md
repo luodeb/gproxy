@@ -4,7 +4,7 @@ description: Send OpenAI Chat, OpenAI Responses, Claude Messages, and Gemini req
 ---
 
 GPROXY answers on the native paths of each accepted wire format. A user API key
-authenticates the caller; the public model name selects the load balancer, and
+authenticates the caller; the public model name selects the route, and
 its members, permissions, quotas, rules, and credentials decide where the
 request goes. The examples assume a public model name `main` and a key
 `sk-<your-key>` created as in the [Quick Start](/getting-started/quick-start/).
@@ -79,7 +79,7 @@ curl "http://127.0.0.1:8787/v1beta/models/main:generateContent" \
   }'
 ```
 
-If the load balancer's member speaks another format, GPROXY converts the
+If the route's member speaks another format, GPROXY converts the
 request on the way out and the response on the way back. The client sees its
 own format in every case.
 
@@ -121,7 +121,7 @@ curl http://127.0.0.1:8787/v1/models \
 `GET /v1/models` answers in the OpenAI or Claude shape, `GET /v1beta/models`
 in the Gemini shape, and `GET /v1/models/{id}` returns one entry. The list
 contains the public model names and variants the key may use. Providers whose
-**Refresh the model list from upstream** setting is on (the default) are asked
+`auto_refresh_models` setting is on (the default) are asked
 for their catalogue concurrently. Listing is answered by the gateway itself,
 still passes admission, and records a zero-cost settlement.
 
@@ -170,19 +170,21 @@ Error bodies use the OpenAI envelope: `{"error":{"message":"..."}}`.
 ## Finding the Request Afterwards
 
 Every response carries an `x-request-id` header of the form
-`<instance-id>-<random>-<sequence>`. In the console:
+`<instance-id>-<random>-<sequence>`. Afterwards:
 
-- **Statistics → Usage** shows requests, input and output tokens, cache reads
-  and writes, and settled cost, filtered by provider, credential, user, key,
-  or model.
-- **Statistics → Request audit** lists each client request with every
+- `GET /admin/api/usage-records` lists individual settlements with requests,
+  input and output tokens, cache reads and writes, and settled cost, filtered
+  by provider, credential, user, key, or model; `GET /admin/api/usage`
+  aggregates the same over a range.
+- `GET /admin/api/logs` lists each client request with every
   upstream call it produced, filtered by user, key, provider, status, or
-  request id. Headers and bodies appear only when the corresponding capture
-  switches are on in **Settings**, and are redacted unless redaction is
-  disabled there.
-- **Statistics → Admin actions** records console changes and channel sign-ins.
+  request id; `GET /admin/api/logs/<request_id>` returns one exchange. Headers
+  and bodies appear only when the corresponding capture switches are on in
+  `PATCH /admin/api/log-settings` or `/admin/api/instance-settings`, and are
+  redacted unless redaction is disabled there.
+- `GET /admin/api/audit` records admin API changes and channel sign-ins.
 
 Users who sign in to `/portal` see their own usage and, when the operator has
-enabled **Show recent settled requests** in **Settings → User portal**, a
+enabled `recent_requests_enabled` via `PATCH /admin/api/portal-settings`, a
 **Recent settled requests** table with provider, operation, upstream model,
 tokens, cost, and latency — never request or response bodies.

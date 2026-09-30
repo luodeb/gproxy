@@ -9,9 +9,9 @@ description: "price_rules、price_rates 与 tiers_json，结算产出的指标�
 token 阶梯。配额（[权限、限流与配额](/zh-cn/guides/permissions/)）消费这个
 结果。成本是不带货币的小数；所有价格共用你录入时的单位。
 
-全新存储会加载内置的全局价格目录。在控制台 → 定价编辑价格，或使用
+全新存储会加载内置的全局价格目录。通过
 `/admin/api/price-rules`、`/admin/api/price-rates` 和
-`POST /admin/api/default-model-catalog/apply-prices`。
+`POST /admin/api/default-model-catalog/apply-prices` 编辑价格。
 
 ## 定价规则
 
@@ -68,7 +68,7 @@ pub struct NormalizedUsage {
 }
 ```
 
-三个 token 字段是 `usage_rows` 中的列；其余都是指标或维度。控制台目录已知
+三个 token 字段是 `usage_rows` 中的列；其余都是指标或维度。内置目录已知
 的指标名：
 
 | 指标 | 单位 |
@@ -117,8 +117,7 @@ token：
 | `{"service_tier": "batch", "input_price": "0.5"}` | `0.5`——200k 档位丢失 |
 | `{"service_tier": "batch", "min_prompt_tokens": 200000, "input_price": "1"}` | `1` |
 
-显式层级价格要在它必须覆盖的每个阈值重复声明，或者改用倍率。控制台会标记
-缺失的档位。
+显式层级价格要在它必须覆盖的每个阈值重复声明，或者改用倍率。
 
 请求层级与实际层级：准入按请求要求的层级定价；结算从响应重新读取层级
 （顶层，或 `usage`、`usageMetadata`、`response`、`message` 之下，或 Gemini

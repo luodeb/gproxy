@@ -18,13 +18,16 @@
 | 组件 | 路径 | 说明 |
 |---|---|---|
 | API 网关 | `/v1/*` | 客户端调用入口 |
-| 运营控制台 | `/admin` | 管理员 Web UI |
-| 用户门户 | `/portal` | 终端用户自助页面 |
+| 用户门户 | `/portal` | 终端用户自助页面（本 fork 唯一的 Web 界面） |
+| 管理 API | `/admin/api/*` | 管理员 REST API + **MCP 服务端**（`POST /admin/api/mcp`） |
 
-> **与 upstream 的差异**：本 fork **移除了公共营销首页**。根路径 `/` 现在直接进入
-> 运营控制台 surface（未登录时即登录页），不再有 landing page。
-> 相应源码（`console/src/components/public/`、`console/src/pages/public.tsx`、
-> `console/src/styles/public-*.css`）已删除。`/admin`、`/portal`、`/v1/*` 行为不变。
+> **与 upstream 的差异（两处）**：
+> 1. 本 fork **移除了公共营销首页**。根路径 `/` 现在直接进入门户 surface
+>    （未登录时即登录页），不再有 landing page。
+> 2. 本 fork **移除了运营控制台的 Web UI**。`/admin` 与 `/admin/*` 的非 API 请求
+>    返回 `302` 跳转到 `/portal`（旧书签仍可用）；`/admin/api/**` 行为完全不变，
+>    管理能力改由 **MCP** 提供（见[管理 API 与 MCP](/reference/admin-api/)）。
+> 3. `/` 的 HTML 由门户 surface 承载。
 
 ### 能力概览
 
@@ -32,12 +35,12 @@
 - **上游池化**：API key / OAuth / cookie 多种凭证，支持刷新、健康检查、凭证轮换与故障转移。
 - **模型名稳定**：对外模型名 → 路由 → 上游模型 的映射，换供应商不用改客户端。
 - **权限与成本**：用户/组织/团队/权限、速率限制、消费配额、按维度定价。
-- **全 UI 运维**：供应商、凭证、模型目录、规则、用量、配额历史都在控制台里管，不用改 JSON。
+- **全 UI/API 运维**：供应商、凭证、模型目录、规则、用量、配额历史都通过管理 API（或 MCP 工具）管理，不用改 JSON。
 
 ### 技术栈
 
 - Rust workspace（13 个 crate），edition 2024。
-- 前端控制台：`console/`，React 19 + Vite + pnpm 9.15.9（TypeScript）。
+- 前端门户：`console/`，React 19 + Vite + pnpm 9.15.9（TypeScript）。
 - 主二进制：`gproxy-host-axum`，`[[bin]] name = "gproxy"`。
 - 前端通过 `rust-embed` **编译期嵌入**二进制（`crates/gproxy-host-axum/assets/web/`）。
 - 存储：SQLite（默认）；可选 Redis / Upstash / PostgreSQL。
@@ -53,7 +56,7 @@ crates/
   gproxy-channels/     # 各上游渠道的协议实现
   gproxy-channel-api/  # 渠道抽象与 endpoint 定义
   ...                  # （其余为存储、CLI 支撑等）
-console/               # React 控制台前端
+console/               # React 用户门户前端
 docs/                  # 文档（Astro）
 scripts/               # 构建 / 打包 / 发布脚本
 deploy/                # 部署素材
@@ -98,7 +101,8 @@ yocto 侧原来的 frpc 容器已删除；`remotePort` 仍为 56188，Caddy 无�
 | 运行方式 | **docker 容器 `gproxy`**（`network_mode: host`，supervisord 作为 PID 1，`restart: unless-stopped`） |
 | 镜像 / 编排 | `/home/yocto/gproxy/container/`（`Dockerfile`、`supervisord.conf`、`docker-compose.yml`） |
 | 监听端口 | **58881** |
-| 管理台 | `http://10.42.30.102:58881/admin`（用户 `admin`） |
+| 管理台 | `http://10.42.30.102:58881/portal`（用户门户；管理员用 `admin` 登录） |
+| 管理 API / MCP | `http://10.42.30.102:58881/admin/api`·`/admin/api/mcp`（Bearer 管理员 key） |
 | 上游 trae-hub | 同机 58880 |
 | 其它容器 | `trae-hub`、`merged-proxy`、`x-kernel-jenkins` |
 | 旧 systemd 单元 | `/home/yocto/.config/systemd/user/gproxy.service`（已 stop + disable，仅作回滚） |
@@ -185,7 +189,7 @@ cargo zigbuild --locked --release -p gproxy-host-axum --target x86_64-unknown-li
 ### 六个必须记住的构建陷阱
 
 1. **rustc 必须 >= 1.98**（`wreq` 要求）。
-2. **先前端后 Rust**。否则 `/admin` 会 404。前端改动后需 `touch static_assets.rs` 才会重新嵌入（体积会从 ~38MB 变 ~49MB）。
+2. **先前端后 Rust**。否则 `/portal` 会 404。前端改动后需 `touch static_assets.rs` 才会重新嵌入（体积会从 ~38MB 变 ~49MB）。
 3. **zig 的 `ar` 不兼容 BoringSSL**：`ar: error: expected [relpos] for 'a', 'b', or 'i' modifier`。必须指向系统 `/usr/bin/ar`。
 4. **CMake 需要真实文件形式的 `x86_64-linux-musl-g++`**，且**不能用符号链接**（`cat >` 会跟随链接，把所有 shim 覆盖成同一内容）。
 5. **切换 CC 后要清 CMake 缓存**：`rm -rf target/*/release/build/aws-lc-sys-* target/*/release/build/btls-sys-*`。

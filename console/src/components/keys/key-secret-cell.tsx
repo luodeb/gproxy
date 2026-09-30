@@ -21,9 +21,9 @@ export function KeySecretCell({ record, reveal, remaskMs = 15_000 }: { record: U
     setPending(true)
     try {
       setSecret((await reveal()).api_key)
-      toast.success(t("users.keys.revealed"))
+      toast.success(t("portal.keys.revealed"))
     } catch {
-      toast.error(t("users.keys.revealError"))
+      toast.error(t("portal.keys.revealError"))
     } finally {
       setPending(false)
     }
@@ -32,22 +32,22 @@ export function KeySecretCell({ record, reveal, remaskMs = 15_000 }: { record: U
     if (secret == null) return
     try {
       await navigator.clipboard.writeText(secret)
-      toast.success(t("users.keys.copied"))
+      toast.success(t("portal.keys.copied"))
     } catch {
-      toast.error(t("users.keys.copyError"))
+      toast.error(t("portal.keys.copyError"))
     }
   }
 
   return (
     <div className="flex min-w-56 items-center gap-1.5">
-      <code className="min-w-0 flex-1 truncate text-xs">{secret ?? t("users.keys.masked", { prefix: record.prefix ?? "" })}</code>
+      <code className="min-w-0 flex-1 truncate text-xs">{secret ?? t("portal.keys.masked", { prefix: record.prefix ?? "" })}</code>
       {secret ? (
         <>
-          <Button size="icon-xs" variant="ghost" aria-label={t("users.keys.copy")} onClick={() => void copy()}><CopyIcon /></Button>
-          <Button size="icon-xs" variant="ghost" aria-label={t("users.keys.remask")} onClick={() => setSecret(null)}><EyeOffIcon /></Button>
+          <Button size="icon-xs" variant="ghost" aria-label={t("portal.keys.copy")} onClick={() => void copy()}><CopyIcon /></Button>
+          <Button size="icon-xs" variant="ghost" aria-label={t("portal.keys.remask")} onClick={() => setSecret(null)}><EyeOffIcon /></Button>
         </>
       ) : (
-        <Button size="icon-xs" variant="ghost" aria-label={t(record.revealable ? "users.keys.reveal" : "users.keys.notRevealable")} disabled={!record.revealable || pending} onClick={() => void onReveal()}>
+        <Button size="icon-xs" variant="ghost" aria-label={t(record.revealable ? "portal.keys.reveal" : "portal.keys.notRevealable")} disabled={!record.revealable || pending} onClick={() => void onReveal()}>
           {pending ? <LoaderCircleIcon className="animate-spin" /> : <EyeIcon />}
         </Button>
       )}

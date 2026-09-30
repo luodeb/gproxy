@@ -3,7 +3,7 @@ title: 路由规则与规则集
 description: "规则集在 Provider 原生格式上修改请求与响应；路由规则决定每个 Provider 如何处理某个操作与入站协议"
 ---
 
-GPROXY 有两套规则机制。两者都在控制台中编辑，也都保存在控制面里：
+GPROXY 有两套规则机制。两者都通过管理 API 编辑，也都保存在控制面里：
 
 - **规则集**是可复用、有序的变更规则列表。一个规则集可以附加到一个或多个
   Provider，在请求发出之前修改 Provider 原生格式的请求，在响应转换回客户端
@@ -11,9 +11,9 @@ GPROXY 有两套规则机制。两者都在控制台中编辑，也都保存在�
 - **路由规则**属于单个 Provider。它按操作和入站协议声明该 Provider 是直通
   请求、变换为另一种线上格式、在本地作答，还是拒绝处理。
 
-全局 **规则** 工作区（`/admin/rules`）编辑规则集及其附加关系。Provider 详情
-的 **规则** 标签页编辑同一批对象，但限定在该 Provider 范围内并提供预设；
-**路由规则** 标签页编辑路由规则。
+规则集及其附加关系通过 `/admin/api/rule-sets`、`/admin/api/rules` 和
+`/admin/api/provider-rule-sets` 编辑；路由规则通过 `/admin/api/routing-rules`。
+`GET /admin/api/rule-presets` 列出兼容性预设。
 
 ## 规则的执行位置
 
@@ -72,7 +72,8 @@ upstream response
 
 过滤条件按 AND 组合；省略的条件匹配全部。请求头过滤是把应用兼容性规则集限定
 到单个客户端的手段：否则一条为 OpenCode 改写工具调用名的响应规则，会对共用该
-Provider 的所有客户端生效。客户端实际发送的请求头行可在 **请求审计** 中查看
+Provider 的所有客户端生效。客户端实际发送的请求头行可在
+`GET /admin/api/logs/<request_id>` 中查看
 （见[用量、日志与审计](/zh-cn/guides/observability/)）。
 
 ### `system_text`
@@ -118,7 +119,7 @@ Provider 的所有客户端生效。客户端实际发送的请求头行可在 *
 | `delete` | 删除键或数组元素；路径缺失时跳过。 |
 | `merge` | 把对象类型的 `value` 浅合并到路径上已有的对象。 |
 
-控制台的模型变体编辑器把变体存成 `rewrite`/`set` 规则，模型过滤即变体名，
+模型变体行为存成 `rewrite`/`set` 规则，模型过滤即变体名，
 因此思考等级之类的变体就是一条可以直接查看的规则。
 
 ### `transform`
@@ -156,7 +157,7 @@ Provider 的所有客户端生效。客户端实际发送的请求头行可在 *
 
 `override`（默认）替换请求头。`merge` 以逗号追加值，已存在时跳过。请求头规则
 在 Provider 的转发元数据策略之前运行，因此该请求头必须是通道会转发的
-（**Provider → 设置 → 转发元数据**）。
+（Provider 的 `traffic_policy` / 转发元数据设置）。
 
 ### 固定执行顺序
 
@@ -165,8 +166,7 @@ system_text -> cache_breakpoint -> rewrite -> transform -> header
 ```
 
 顺序先按类型决定，与规则来自哪个规则集无关。同一类型内，已附加的规则集按附加
-顺序运行，规则按 `sort_order` 运行。控制台在每条规则旁显示得出的"实际第 N
-个"。
+顺序运行，规则按 `sort_order` 运行；实际顺序由这两个键得出。
 
 ### 把规则集附加到 Provider
 
@@ -176,12 +176,12 @@ system_text -> cache_breakpoint -> rewrite -> transform -> header
 不能删除。
 
 创建 Provider 时会同时创建并附加一个名为 `<provider> · defaults` 的空私有规则
-集。控制台把模型变体规则写在这里；你也可以往里添加自己的规则。
+集。模型变体规则写在这里；你也可以往里添加自己的规则。
 
 ### 预设
 
-`GET /admin/api/rule-presets` 列出预设；Provider 的规则标签页通过 **应用兼容性
-预设** 应用某个预设（`POST /admin/api/providers/<id>/rule-presets/<preset>`）。
+`GET /admin/api/rule-presets` 列出预设；用
+`POST /admin/api/providers/<id>/rule-presets/<preset>` 把某个预设应用到 Provider。
 应用会创建或更新一个名为 `<preset> compatibility` 的普通规则集，附加到该
 Provider，并保持可编辑。再次应用会就地刷新规则。
 
@@ -229,8 +229,8 @@ Provider，并保持可编辑。再次应用会就地刷新规则。
 ### 通道默认值与操作员行
 
 每个通道在代码里声明一张默认表。创建 Provider 时按表中每一项播种一行，来源为
-`channel_default`；控制台把这些行显示为灰色并标注 **继承**。编辑、新增或删除
-某行会把它变成操作员行。启动时会为已有 Provider 回填新增的通道默认值，不触碰
+`channel_default`；`GET /admin/api/routing-rules` 报告每行的来源。编辑、新增或
+删除某行会把它变成操作员行。启动时会为已有 Provider 回填新增的通道默认值，不触碰
 已存在的行。
 
 **重置默认**（`POST /admin/api/providers/<id>/routing-defaults/reset`）删除该

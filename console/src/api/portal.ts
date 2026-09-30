@@ -10,13 +10,11 @@ import type { PortalModelDto } from "@/generated/PortalModelDto"
 import type { PortalQuotaWindowDto } from "@/generated/PortalQuotaWindowDto"
 import type { PortalRecentQueryDto } from "@/generated/PortalRecentQueryDto"
 import type { PortalRecentRequestDto } from "@/generated/PortalRecentRequestDto"
-import type { PortalSettingsDto } from "@/generated/PortalSettingsDto"
 import type { PortalUsageDto } from "@/generated/PortalUsageDto"
 import type { PortalUsageQueryDto } from "@/generated/PortalUsageQueryDto"
 import type { UserKeyCreateResponse } from "@/generated/UserKeyCreateResponse"
 import type { UserKeyDto } from "@/generated/UserKeyDto"
-import type { UserKeyUpdateRequest } from "@/generated/UserKeyUpdateRequest"
-import { ApiError, api, json } from "@/api/client"
+import { ApiError, json } from "@/api/client"
 
 async function portalApi<T>(path: string, signal?: AbortSignal, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -47,7 +45,6 @@ export const portalLogout = () => portalApi<void>("/portal/api/logout", undefine
 export const portalChangePassword = (value: PortalPasswordChangeRequest) =>
   portalApi<void>("/portal/api/password", undefined, json("POST", value))
 
-export const portalContext = () => portalApi<PortalContextDto>("/portal/api/context")
 
 export const portalModels = (signal?: AbortSignal) =>
   portalApi<Array<PortalModelDto>>("/portal/api/models", signal)
@@ -77,17 +74,11 @@ export const revokePortalOAuthSession = (id: number) => portalApi<void>(`/portal
 export const createPortalKey = (value: PortalKeyCreateRequest) =>
   portalApi<UserKeyCreateResponse>("/portal/api/keys", undefined, json("POST", value))
 
-export const updatePortalKey = (id: number, value: UserKeyUpdateRequest) =>
-  portalApi<void>(`/portal/api/keys/${id}`, undefined, json("PATCH", value))
 
 export const deletePortalKey = (id: number) =>
   portalApi<void>(`/portal/api/keys/${id}`, undefined, { method: "DELETE" })
 
-export const portalSettings = () =>
-  api<PortalSettingsDto>("/admin/api/portal-settings")
 
-export const savePortalSettings = (value: PortalSettingsDto) =>
-  api<PortalSettingsDto>("/admin/api/portal-settings", json("PATCH", value))
 
 export const revealPortalKey = (id: number) =>
   portalApi<UserKeyRevealResponse>(`/portal/api/keys/${id}/reveal`, undefined, json("POST", {}))

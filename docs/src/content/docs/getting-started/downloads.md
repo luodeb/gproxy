@@ -18,7 +18,7 @@ remains available on its `v2.x.y` tags.
 :::
 
 Do not clone the repository or compile GPROXY to run it. The assets below
-contain the optimized binary with the console embedded. Building from source
+contain the optimized binary with the user portal embedded. Building from source
 is covered in [Building & Releases](/deployment/release-build/).
 
 ## Asset Names
@@ -49,7 +49,7 @@ link the C runtime statically.
 | Package | Platform | What it does |
 | --- | --- | --- |
 | `.deb` | Debian and Ubuntu families | Installs `/usr/bin/gproxy`, a desktop launcher, and an XDG autostart entry. |
-| `.dmg` | macOS 11 or later | A `GPROXY.app` bundle that runs the server in the background and opens the console. |
+| `.dmg` | macOS 11 or later | A `GPROXY.app` bundle that runs the server in the background and opens the portal. |
 | `.msix` | Windows 10 version 2004 or later | Store-managed installation, Start menu launcher, private data, and Windows Startup task. Store publication is pending. |
 | `.apk` | Android 9 (API 28) or later | A signed app with a foreground service, a launcher screen, and in-app updates. |
 
@@ -88,9 +88,9 @@ Container images are not Release attachments. See
 
 | Asset | Contents |
 | --- | --- |
-| `gproxy-edge-cloudflare.zip` | Cloudflare Workers project: Worker entry, `wrangler.toml`, wasm package, console assets. |
-| `gproxy-edge-deno.zip` | Deno Deploy project: `main.ts`, `deno.json`, wasm package, console assets. |
-| `gproxy-edge-netlify.zip` | Netlify Edge project: edge function, `netlify.toml`, wasm package, console assets. |
+| `gproxy-edge-cloudflare.zip` | Cloudflare Workers project: Worker entry, `wrangler.toml`, wasm package, portal assets. |
+| `gproxy-edge-deno.zip` | Deno Deploy project: `main.ts`, `deno.json`, wasm package, portal assets. |
+| `gproxy-edge-netlify.zip` | Netlify Edge project: edge function, `netlify.toml`, wasm package, portal assets. |
 | `gproxy-edge.wasm` | The raw `wasm32-unknown-unknown` build, for a custom host. |
 
 Upload a bundle; do not ask the platform to compile Rust. See

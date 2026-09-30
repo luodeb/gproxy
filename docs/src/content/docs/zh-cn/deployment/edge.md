@@ -33,8 +33,8 @@ Turso 是常见的 libSQL 提供方：创建数据库和 token，使用数据库
 
 | 路径 | 由谁提供 |
 | --- | --- |
-| `/`、`/admin`、`/admin/**`（`/admin/api/**` 除外）、`/portal`、`/portal/` | 静态 `index.html`（控制台 SPA），仅 `GET`/`HEAD` |
-| `/assets/**`、`/favicon.svg` | 静态控制台资源 |
+| `/`、`/portal`、`/portal/**`（`/portal/api/**` 除外） | 静态 `index.html`（门户 SPA），仅 `GET`/`HEAD` |
+| `/assets/**`、`/favicon.svg` | 静态 Web 资源 |
 | `/admin/api/**`、`/portal/api/**` | Rust：管理与门户分发 |
 | 其余全部 | Rust：网关入口（`/v1/...`、Claude 与 Gemini 原生路径、按名称指定 Provider 的路径、WebSocket 升级） |
 
@@ -58,7 +58,7 @@ Cloudflare 的 `wrangler.toml` 设置了 `run_worker_first = true`，因此 Work
 每个 release 发布 `gproxy-edge-cloudflare.zip`、`gproxy-edge-deno.zip`、
 `gproxy-edge-netlify.zip` 和原始的 `gproxy-edge.wasm`。新构建使用 GitHub 附件摘要
 和产物证明提供校验和与构建来源。zip 解压为 `<platform>/`，内含入口文件、配置、
-`pkg/`（wasm 与 wasm-bindgen glue）和 `public/`（控制台构建产物）。见
+`pkg/`（wasm 与 wasm-bindgen glue）和 `public/`（门户构建产物）。见
 [下载](/zh-cn/getting-started/downloads/)。
 
 `wrangler.toml` 与 `netlify.toml` 都声明了 `[build] command = "pnpm run build"`，它会
@@ -108,18 +108,18 @@ cd deploy/deno && deno task build && deno task check
 
 `build:wasm` 运行 `wasm-pack build ../../crates/gproxy-host-edge --release`，Cloudflare
 用 `--target bundler`，Deno 与 Netlify 用 `--target web`，输出到 `pkg/`。`build:assets`
-构建控制台并把 `console/dist` 复制到 `public/`。两个目录都被 gitignore。
+构建前端并把 `console/dist` 复制到 `public/`。两个目录都被 gitignore。
 `scripts/package-edge-release.sh` 用一次 `cargo build` 产出全部三个 zip；它需要
 预构建的 `console/dist` 和与 `Cargo.lock` 匹配的 `wasm-bindgen` CLI。见
 [构建与发布](/zh-cn/deployment/release-build/)。
 
 ## 首次启动
 
-打开 `https://<your-deployment>/admin`。store 为空时 `GET /admin/api/session` 返回
-`setup_required: true`，控制台显示初始化表单；`POST /admin/api/setup` 创建第一个
-管理员并完成登录。之后的流程与原生相同：添加 Provider，粘贴或登录凭证，创建路由，
-签发用户密钥；见[快速开始](/zh-cn/getting-started/quick-start/)。`/portal` 对用户
-同样可用。
+store 为空时 `GET /admin/api/session` 返回 `setup_required: true`；
+`POST /admin/api/setup` 创建第一个管理员并完成登录。之后的流程与原生相同：添加
+Provider，粘贴或登录凭证，创建路由，签发用户密钥；见
+[快速开始](/zh-cn/getting-started/quick-start/)。用户用管理员设置的密码在 `/portal`
+登录。
 
 ## 限制
 

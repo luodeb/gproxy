@@ -37,8 +37,8 @@ state. See [Storage & Cache Backends](/reference/database/).
 
 | Path | Served by |
 | --- | --- |
-| `/`, `/admin`, `/admin/**` (except `/admin/api/**`), `/portal`, `/portal/` | Static `index.html` (console SPA), `GET`/`HEAD` only |
-| `/assets/**`, `/favicon.svg` | Static console assets |
+| `/`, `/portal`, `/portal/**` (except `/portal/api/**`) | Static `index.html` (portal SPA), `GET`/`HEAD` only |
+| `/assets/**`, `/favicon.svg` | Static web assets |
 | `/admin/api/**`, `/portal/api/**` | Rust: admin and portal dispatch |
 | Everything else | Rust: gateway ingress (`/v1/...`, Claude and Gemini native paths, named-provider paths, WebSocket upgrades) |
 
@@ -65,7 +65,7 @@ Every release publishes `gproxy-edge-cloudflare.zip`, `gproxy-edge-deno.zip`,
 GitHub's asset digests and artifact attestations for checksums and provenance.
 A zip unpacks to
 `<platform>/` with the entry file, its config, `pkg/` (wasm and
-wasm-bindgen glue), and `public/` (the console build). See
+wasm-bindgen glue), and `public/` (the portal build). See
 [Downloads](/getting-started/downloads/).
 
 Both `wrangler.toml` and `netlify.toml` declare a
@@ -119,7 +119,7 @@ cd deploy/deno && deno task build && deno task check
 
 `build:wasm` runs `wasm-pack build ../../crates/gproxy-host-edge --release`
 with `--target bundler` for Cloudflare and `--target web` for Deno and
-Netlify, writing `pkg/`. `build:assets` builds the console and copies
+Netlify, writing `pkg/`. `build:assets` builds the web application and copies
 `console/dist` to `public/`. Both directories are gitignored.
 `scripts/package-edge-release.sh` produces all three zips from a single
 `cargo build`; it needs a prebuilt `console/dist` and a `wasm-bindgen` CLI
@@ -127,13 +127,12 @@ matching `Cargo.lock`. See [Building & Releases](/deployment/release-build/).
 
 ## First Boot
 
-Open `https://<your-deployment>/admin`. On an empty store
-`GET /admin/api/session` reports `setup_required: true` and the console
-shows the setup form; `POST /admin/api/setup` creates the first
-administrator and signs you in. From there the workflow is the native one:
-add a provider, paste or log in a credential, create a route, and issue a
-user key; see [Quick Start](/getting-started/quick-start/). `/portal` works
-the same way for users.
+On an empty store `GET /admin/api/session` reports `setup_required: true`;
+`POST /admin/api/setup` creates the first administrator and signs you in.
+From there the workflow is the native one: add a provider, paste or log in a
+credential, create a route, and issue a user key; see
+[Quick Start](/getting-started/quick-start/). Users sign in at `/portal` with
+the passwords an administrator sets.
 
 ## Limits
 

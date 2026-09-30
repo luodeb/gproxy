@@ -5,20 +5,20 @@ description: "Build gproxy and the edge wasm from source, run the quality gates,
 
 GPROXY ships as one native binary, `gproxy`, built from
 `crates/gproxy-host-axum`, plus a wasm host, `crates/gproxy-host-edge`, for
-fetch-based platforms. The operator console is compiled once and embedded
-into the native binary, so a source build always starts with the console.
+fetch-based platforms. The web application is compiled once and embedded
+into the native binary, so a source build always starts with it.
 
 ## Prerequisites
 
 | Tool | Used for |
 | --- | --- |
 | Rust stable toolchain (edition 2024) | Every crate; add the `wasm32-unknown-unknown` target for the edge host |
-| Node.js LTS and pnpm 9 | Console (`console/`) and docs (`docs/`) |
+| Node.js LTS and pnpm 9 | Web application (`console/`) and docs (`docs/`) |
 | `wasm-bindgen-cli` matching `Cargo.lock`, or `wasm-pack` | Edge glue generation |
 | Docker with buildx | Container image |
 | `cross`, `cargo-ndk`, Windows SDK MakeAppx, `dpkg-deb`, `hdiutil` | Release packaging only |
 
-## Build the Console
+## Build the Web Application
 
 ```sh
 cd console
@@ -30,7 +30,8 @@ pnpm build
 which copies `console/dist/` into `crates/gproxy-host-axum/assets/web/`. That
 directory is gitignored apart from `.gitkeep`; the native host embeds it with
 `rust-embed` at compile time. If you skip this step the binary still serves
-the API, but `/`, `/admin`, and `/portal` answer `404` with the text
+the API, but `/`, `/portal`, and the portal deep links answer `404` with the
+text
 `web assets are not embedded; run pnpm build in console/ and rebuild gproxy`.
 
 ## Build the Native Binary
@@ -76,14 +77,14 @@ wasm-bindgen --target bundler --out-dir deploy/cloudflare/pkg \
 Cloudflare uses the `bundler` target; Deno and Netlify use `--target web`.
 The `wasm-bindgen` CLI version must equal the `wasm-bindgen` crate version in
 `Cargo.lock`. `scripts/package-edge-release.sh` performs the build, generates
-both glue variants, copies a prebuilt `console/dist` into each
+both glue variants, copies the prebuilt `console/dist` into each
 `deploy/<platform>/public/`, and zips the three bundles. The platform
 directories also carry `pnpm run build` / `deno task build` scripts that do
 the same through `wasm-pack`; see [Edge Wasm](/deployment/edge/).
 
 ## Quality Gates
 
-Backend and console changes finish with the same commands CI runs:
+Backend and web changes finish with the same commands CI runs:
 
 | Command | Checks |
 | --- | --- |
@@ -95,9 +96,10 @@ Backend and console changes finish with the same commands CI runs:
 | `pnpm test` (in `console/`) | Vitest and the model-catalog script tests |
 | `pnpm build` (in `console/`) | Production bundle |
 
-The admin API DTOs derive `ts_rs::TS`; `cargo test` writes them to
-`console/src/generated/`. Those files are generated output: change the Rust
-type, run `cargo test`, and commit the result. Never edit them by hand.
+The admin API DTOs derive `ts_rs::TS`; the `export_console_types` test writes
+the subset the portal uses to `console/src/generated/`. Those files are
+generated output: change the Rust type, run `cargo test`, and commit the
+result. Never edit them by hand.
 
 ## CI
 
@@ -131,13 +133,13 @@ The tag push runs `.github/workflows/release.yml`. Jobs, in order:
 1. **Release metadata** — verifies the tag equals `v<workspace version>`,
    derives the channel, and loads the target matrix from
    `scripts/release-targets.json`.
-2. **Console bundle** — builds the console once with pnpm and passes it to
+2. **Console bundle** — builds the web application once with pnpm and passes it to
    native and edge jobs as a workflow artifact. Container jobs package the
    native Linux binaries into GNU and musl images for amd64, arm64 and riscv64,
    with BuildKit provenance and SBOM attestations, then publish multi-platform
    manifests to `ghcr.io/leenhawk/gproxy`.
 3. **Native `<target>`** — one job per matrix row. Each downloads the
-   console into `crates/gproxy-host-axum/assets/web`, checks that the update
+   bundle into `crates/gproxy-host-axum/assets/web`, checks that the update
    public key decodes to 32 bytes, builds `--bin gproxy` with `cargo`,
    `cross`, or `cargo-ndk` (Android API 28), and packages the result.
    Windows builds set `RUSTFLAGS=-C target-feature=+crt-static`; macOS
@@ -258,7 +260,7 @@ A released binary checks for updates against a signed manifest:
 | `staging` | `https://github.com/LeenHawk/gproxy/releases/download/staging/manifest.json` |
 | `dev` | `https://github.com/LeenHawk/gproxy/releases/download/dev/manifest.json` |
 
-The compiled channel is the default; the console's update channel setting or
+The compiled channel is the default; the update channel setting or
 `GPROXY_UPDATE_CHANNEL` overrides it, and `GPROXY_UPDATE_SERVE` points at a
 self-hosted manifest. GitHub's `releases/latest` never resolves to a
 prerelease, so prerelease builds are compiled with channel `dev` and follow the

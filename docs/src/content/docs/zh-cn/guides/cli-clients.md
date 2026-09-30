@@ -70,8 +70,8 @@ Provider 设置 JSON 可以影响本地回答：`codex_pat_plan_type`（`free`�
 ### 限制
 
 非流式 Responses 请求在上游转换为流式。Token 统计由本地回答。`codex` 渠道不
-支持 embeddings。线程级用量为空；通过 CLI 查询的限流重置卡始终为无，控制台
-可以使用它们。
+支持 embeddings。线程级用量为空；通过 CLI 查询的限流重置卡始终为无，管理 API 可以
+使用它们（`POST /admin/api/credentials/<id>/quota-reset`）。
 
 ## Claude Code
 

@@ -14,8 +14,8 @@ request model
   -> provider credential
 ```
 
-In the console, a route is called a **load balancer**, an exposed model is a
-**model mapping**, and an alias is a **routing alias**.
+In the admin API, a route is the `routes` entity, an exposed model is a
+`model-aliases` row, and an alias is an `aliases` row.
 
 ## Provider Models
 
@@ -30,13 +30,15 @@ Each provider keeps a catalogue of the upstream models it serves. A row has:
 | Variants | Extra names that route to this model. See below. |
 | Enabled | Disabled rows are never listed. |
 
-**Pull from upstream** asks the provider for its live catalogue through the
-ordinary list-models path, authenticated with your own key, and shows the
-result. Nothing is written until you pick rows to import; known rows are
+`POST /admin/api/models/discover` asks the provider for its live catalogue
+through the
+ordinary list-models path, authenticated with your own key, and returns the
+result. Nothing is written until you create `provider-models` rows to import
+(`POST /admin/api/provider-models`); known rows are
 marked. When the embedded default catalogue knows a model, its limits fill
 gaps and a default price rule can be created for this provider.
 
-**Test** sends one 16-token chat completion for the model through the normal
+`POST /admin/api/models/test` sends one 16-token chat completion for the model through the normal
 pipeline with your own key. It passes admission, is billed, and reports the
 status, latency, the key that paid, and the reply or the upstream error.
 
@@ -55,12 +57,12 @@ A route has a name, a maximum attempt count, and members:
 Members are ordered by tier, then health, then weight. One member of the
 lowest healthy tier is chosen by a deterministic weighted counter, then a
 credential inside it by the provider's strategy. Failover walks the rest of
-the ordered list until the route's **Maximum attempts** is spent. Dead
+the ordered list until the route's `max_attempts` is spent. Dead
 credentials are excluded before the slot is consumed; degraded ones sort last.
 
 ## Exposed Models
 
-A **model mapping** binds a public name to a route. What a route advertises is
+A **model alias** binds a public name to a route. What a route advertises is
 folded from its members' provider-model rows, conservatively:
 
 - a limit is known only when every member states one, and the minimum wins;
@@ -96,9 +98,8 @@ base name itself should not be listed:
 { "expose_base": false, "variants": ["gpt-5-thinking-high", "gpt-5-tier-flex"] }
 ```
 
-Variant names must be unique across the whole catalogue. The console's
-**Set behavior** picker suggests suffixes per protocol and records what each
-one injects:
+Variant names must be unique across the whole catalogue. The suffixes the
+core recognises per protocol, and what each one injects:
 
 | Protocol | Suffixes | Request field |
 | --- | --- | --- |
@@ -115,7 +116,7 @@ Thinking and tier suffixes are applied by the core itself: when the requested
 name is a declared variant and stripping recognised suffixes yields the base,
 the body's `model` is rewritten and the fields above are set for the target
 protocol. Every other behaviour is stored as ordinary `rewrite` rules, filtered
-by the variant name, in a rule set the console creates per provider (named
+by the variant name, in a rule set created per provider (named
 `<provider> · defaults`). You can inspect and edit them in
 [Routing Rules & Rule Sets](/guides/rules/).
 

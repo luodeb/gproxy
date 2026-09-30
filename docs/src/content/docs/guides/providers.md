@@ -1,6 +1,6 @@
 ---
 title: "Providers & Credentials"
-description: "Channels, providers, credential pools, the login wizard, token refresh, health tracking, and provider tooling in the console"
+description: "Channels, providers, credential pools, login flows, token refresh, health tracking, and provider tooling through the admin API"
 ---
 
 A **channel** is a compiled-in adapter for one upstream API family. A
@@ -8,13 +8,14 @@ A **channel** is a compiled-in adapter for one upstream API family. A
 pool of credentials. Create as many providers per channel as you need, for
 example `openai-main` and `openai-eu` both on the `openai` channel.
 
-Changes saved in the console apply to new requests without a restart.
+Changes saved through the admin API apply to new requests without a restart.
 
 ## Channels
 
-The console reads the channel list from the running binary. Each channel
+The channel list comes from the running binary: `GET /admin/api/channels`.
+Each channel
 declares its display name, the routes it can serve, the provider settings it
-accepts, the credential fields it needs, and whether it offers a login wizard.
+accepts, the credential fields it needs, and whether it offers a login flow.
 The 28 channel ids, grouped by credential shape:
 
 | Credential shape | Channel ids |
@@ -37,7 +38,7 @@ Two v2 id pairs are canonicalized on import: `kimiapi` and `kimicode` become
 | Field | Meaning |
 | --- | --- |
 | Route name (`name`) | Unique identifier. It is also the named prefix in URLs, for example `/openai-main/v1/chat/completions`. |
-| Display name (`label`) | Optional text shown in the console. |
+| Display name (`label`) | Optional, for the operator's own reference. |
 | Channel | One of the ids above. Fixed after creation. |
 | Credential strategy | `round_robin` (default) or `sticky`. See below. |
 | Provider proxy URL | Overrides the instance proxy for this provider. Credentials can override it again. |
@@ -48,7 +49,8 @@ Two v2 id pairs are canonicalized on import: `kimiapi` and `kimicode` become
 ### Channel Settings
 
 Settings are stored as one JSON object. The channel declares typed fields for
-the common keys; everything else is reachable through **Edit settings JSON**.
+the common keys; everything else is reachable by editing the provider's
+`settings` JSON directly.
 
 | Key | Channels | Meaning |
 | --- | --- | --- |
@@ -61,7 +63,7 @@ the common keys; everything else is reachable through **Edit settings JSON**.
 | `region`, `video_output_s3_uri` | `aws-bedrock` | AWS region; S3 destination for generated video. |
 | `region`, `profile_arn`, `auth_base_url` | `kiro` | AWS region, profile ARN, authentication origin. |
 | `location`, `oauth_client_id`, `oauth_client_secret`, `oauth_token_url` | `vertex`, `antigravity`, `geminicli` | Google Cloud region and OAuth client overrides. |
-| `tier`, `console_base_url` | `opencode` | `zen` or `go`; console origin for device login. |
+| `tier`, `console_base_url` | `opencode` | `zen` or `go`; vendor origin for device login. |
 
 Exact endpoint overrides live under `endpoints`, keyed by operation kind, and
 take precedence over `base_url`. No path is appended; `{model}` is replaced
@@ -76,7 +78,7 @@ with the upstream model id:
 }
 ```
 
-The console offers only the kinds the channel can serve. Common keys are
+A credential's `secret` accepts any of the kinds the channel can serve. Common keys are
 `openai_chat_completions`, `openai_responses`, `claude_messages`,
 `gemini_generate_content`, `gemini_stream_generate_content`,
 `openai_list_models`, `openai_embeddings`, `image_generations`.
@@ -97,8 +99,8 @@ A credential belongs to one provider and carries:
 | Enabled | Disabled credentials are skipped. |
 
 Secrets are sealed at rest when a master key is configured (see
-[Configuration](/reference/configuration/)). Reading a stored secret back in
-the console is a separate, audited action.
+[Configuration](/reference/configuration/)). Reading a stored secret back is a
+separate, audited action (`POST /admin/api/credentials/<id>/reveal`).
 
 ### Pool Strategy
 
@@ -125,9 +127,9 @@ dead. A failed token refresh marks the whole credential degraded; a malformed
 secret marks it dead. Degraded credentials sort after healthy ones in the same
 tier; dead ones are removed from the plan. A newer observation replaces the
 older one, and observations recorded against a previous credential version are
-ignored, so re-saving the secret starts clean. The credential card shows the
-worst current state, the abnormal models, the last status and detail, and a
-**Clear health state** action.
+ignored, so re-saving the secret starts clean. `GET /admin/api/credentials`
+reports the worst current state, the abnormal models and the last status and
+detail; `POST /admin/api/credentials/<id>/health-reset` clears it.
 
 ### Token Refresh
 
@@ -137,9 +139,9 @@ once; the other requests poll every second and pick up the new version. The
 rotated secret is persisted with a version guard. Claude rotates the refresh
 token on every refresh, so this path must never lose a write.
 
-## Login Wizard
+## Login Flows
 
-Two channels acquire their first credential through the console:
+Two channels acquire their first credential through the login routes:
 
 | Channel | Modes |
 | --- | --- |
@@ -147,11 +149,15 @@ Two channels acquire their first credential through the console:
 | `claudecode` | Browser sign-in (authorization code + PKCE), Browser cookie (native builds only) |
 
 - **Browser sign-in**: GPROXY builds the authorization URL with an S256 PKCE
-  challenge and state. Approve in the browser, then paste the full callback
-  URL back into the wizard. The code exchange stores access and refresh tokens.
-- **Device code**: the wizard shows a user code and the vendor verification
-  page, then polls until the vendor reports approval or denial.
-- **Browser cookie**: paste the full `Cookie` header or the `sessionKey`
+  challenge and state (`POST /admin/api/login/authcode/start`). Approve in the
+  browser, then complete it with the full callback URL
+  (`POST /admin/api/login/authcode/complete`). The code exchange stores access
+  and refresh tokens.
+- **Device code**: `POST /admin/api/login/device/start` returns a user code
+  and the vendor verification page; `/device/poll` waits until the vendor
+  reports approval or denial.
+- **Browser cookie**: `POST /admin/api/login/cookie` takes the full `Cookie`
+  header or the `sessionKey`
   value. GPROXY discovers the organization, runs the OAuth exchange with the
   cookie, and keeps the cookie sealed for re-login when the tokens expire.
 
@@ -159,8 +165,11 @@ Every other channel takes a pasted key or token.
 
 ## Credential spending limits
 
-Open **Providers → Credentials → Spending limits** to set independent total,
-monthly, weekly, and daily USD caps. Leave a field blank for unlimited spend;
+Set independent total, monthly, weekly, and daily USD caps by creating a
+`quotas` row scoped to the credential (`POST /admin/api/quotas` with
+`subject_kind: "credential"`, the credential's `subject_id`, and the
+`quota_total`, `quota_monthly`, `quota_weekly`, and `quota_daily` fields).
+Leave a field blank for unlimited spend;
 zero immediately blocks paid requests. Reaching any cap excludes that credential
 from new paid attempts. Routing may select another credential; if every candidate
 is exhausted, the request returns HTTP 402. Free operations remain available.
@@ -170,7 +179,8 @@ model pricing blocks paid requests on a limited credential. Counters persist
 independently of usage logging; disabling enforcement keeps counting, and editing
 limits preserves existing spend. Total spend never resets automatically. Daily,
 weekly, and monthly caps reset at 00:00 UTC each day, Monday, and the first of the
-month respectively. The Console displays reset times in your local timezone.
+month respectively. Reset times are UTC; the portal renders them in the
+viewer's local timezone.
 
 Before a paid request is sent, its estimated cost (input tokens at the model's
 price) is reserved against the credential's windows, so concurrent requests
@@ -182,17 +192,22 @@ include requests made outside this gateway or reconcile provider invoices.
 
 ## Tools
 
-- **Connectivity test**: probes `https://1.1.1.1/cdn-cgi/trace` (IPv4 and
+- **Connectivity test**: `POST /admin/api/connectivity/test` probes
+  `https://1.1.1.1/cdn-cgi/trace` (IPv4 and
   IPv6) through the proxy that would apply at the chosen scope, and reports
   the egress IP, location, latency, and which proxy source was used.
 - **Upstream quota**: for channels that expose it (`codex`, `claudecode`,
-  `geminicli`), the credential card shows observed quota windows with used
-  percent and period end. **Refresh** probes the upstream account live;
-  Codex reset credits can be consumed from the card. A credential with a live
+  `geminicli`), `GET /admin/api/credentials/<id>/quota` reports observed quota
+  windows with used
+  percent and period end. `POST /admin/api/credentials/<id>/quota-probe`
+  probes the upstream account live;
+  Codex reset credits can be consumed with `/quota-reset`.
+  A credential with a live
   window at 90% or more sorts behind its peers in the same failover tier, and
   at 100% it sorts last.
-- **Batch actions**: enable, disable, and delete apply to selected providers
-  and credentials in one call, with a per-item outcome.
+- **Batch actions**: `POST /admin/api/batch/providers` and
+  `/admin/api/batch/credentials` apply `enable`, `disable`, or `delete` with a
+  per-item outcome.
 - **Export / import**: a configuration export covers identity, providers,
   credentials, keys, quotas, pricing, routes, aliases, and rules. Secrets are
   omitted unless requested; a secret-bearing export records whether it was

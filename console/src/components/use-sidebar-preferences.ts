@@ -1,14 +1,14 @@
 import { useState } from "react"
 
-const STORAGE_KEY = "gproxy.sidebar.preferences"
+const DEFAULT_STORAGE_KEY = "gproxy.sidebar.preferences"
 const defaultWidth = 240
 const minWidth = 192
 const maxWidth = 384
 type StoredSidebar = { version: 1; width: number; collapsed: boolean }
 
-function readStored(): StoredSidebar {
+function readStored(storageKey: string): StoredSidebar {
   try {
-    const value = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "null") as StoredSidebar | null
+    const value = JSON.parse(window.localStorage.getItem(storageKey) ?? "null") as StoredSidebar | null
     if (value?.version === 1) return { ...value, width: Math.min(maxWidth, Math.max(minWidth, value.width)) }
   } catch {
     // Default preferences keep the shell usable when storage is unavailable.
@@ -16,12 +16,14 @@ function readStored(): StoredSidebar {
   return { version: 1, width: defaultWidth, collapsed: false }
 }
 
-export function useSidebarPreferences() {
-  const [value, setValue] = useState(readStored)
+/// `storageKey` lets a second surface (the user portal) keep its own width and
+/// collapsed state instead of sharing the operator console's preferences.
+export function useSidebarPreferences(storageKey: string = DEFAULT_STORAGE_KEY) {
+  const [value, setValue] = useState(() => readStored(storageKey))
   const update = (next: StoredSidebar) => {
     setValue(next)
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      window.localStorage.setItem(storageKey, JSON.stringify(next))
     } catch {
       // The updated layout remains active for this session.
     }

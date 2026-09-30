@@ -12,8 +12,8 @@ token ladder by prompt size and service tier. Quotas
 result. Costs are decimals without a currency; every price shares
 whatever unit you enter.
 
-A fresh store loads the embedded global price catalog. Edit prices at
-console → Pricing, or through `/admin/api/price-rules`,
+A fresh store loads the embedded global price catalog. Edit prices through
+`/admin/api/price-rules`,
 `/admin/api/price-rates` and
 `POST /admin/api/default-model-catalog/apply-prices`.
 
@@ -76,7 +76,7 @@ pub struct NormalizedUsage {
 ```
 
 The three token fields are columns in `usage_rows`; everything else is a
-metric or a dimension. The metric names the console catalog knows:
+metric or a dimension. The metric names the built-in catalog knows:
 
 | Metric | Unit |
 | --- | --- |
@@ -130,7 +130,7 @@ prompt tokens:
 | `{"service_tier": "batch", "min_prompt_tokens": 200000, "input_price": "1"}` | `1` |
 
 Repeat an explicit tier price at every threshold it must cover, or use a
-multiplier. The console flags a missing step.
+multiplier.
 
 Requested versus served: admission prices the tier the request asked for;
 settlement re-reads the tier from the response (top-level or under

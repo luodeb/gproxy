@@ -17,7 +17,7 @@ Provider 之前提供一个 API 密钥入口，池化上游凭证，负责路由
 
 | 宿主 | 运行时 | 说明 |
 | --- | --- | --- |
-| `gproxy-host-axum` | 原生二进制（`gproxy`） | Tokio + axum 监听器，内嵌控制台，公告、自启动、自更新。 |
+| `gproxy-host-axum` | 原生二进制（`gproxy`） | Tokio + axum 监听器，内嵌用户门户，公告、自启动、自更新。 |
 | `gproxy-host-edge` | 基于 fetch 的平台 | Cloudflare Workers、Deno Deploy、Netlify Edge；编译到 `wasm32-unknown-unknown`。 |
 | 你的应用 | 直接嵌入 | 链接 `gproxy-core`（或 `gproxy-app`），调用同一个执行入口。 |
 
@@ -156,7 +156,7 @@ WebSocket 入口同理：一张已声明升级的注册表，绝不是网关里�
 
 一个操作只声明一次。`gproxy-protocol` 里的 `OperationSpec`
 为每个操作声明：所属分组、各线协议族的入口路径模式、请求目标、请求体与流的预期、可计费性与结算模式、
-亲和类型，以及是否为 WebSocket 升级。分类、通道、路由默认值、结算和控制台生成的元数据都读取这唯一的声明。
+亲和类型，以及是否为 WebSocket 升级。分类、通道、路由默认值、结算和管理 API 生成的元数据都读取这唯一的声明。
 在 v2 中，同样的事实散落在十多个 match 点和五份平行的可计费操作列表里，被漏掉的正是第五份。
 
 协议枚举在工作区内是穷尽的。新增一个变体会产生一份编译错误清单，列出每一个需要更新的位置；
@@ -198,7 +198,7 @@ Provider 原生工具 — Claude 的 `bash` 与 `text_editor`、Responses 的 `s
 - **服务面表**及任何**操作驱动**（Claude Web 这类多步浏览器回合是声明式状态机，其副调用由核心传输并经过漏斗）；
 - **客户端指纹** — ALPN、TLS 版本区间、密码套件与曲线列表、HTTP/2 设置、头部顺序 — 全是普通数据。
   传输层只持有一份通用翻译，不认识任何通道名；
-- **登录模式** — 带 PKCE 的授权码、设备码或 cookie 交换 — 控制台无需通道特定 UI 即可渲染；
+- **登录模式** — 带 PKCE 的授权码、设备码或 cookie 交换 — 管理 API 无需通道特定 UI 即可暴露；
 - Provider 与凭证表单所需的**字段**，附带标签与帮助文本，同样以通用方式渲染。
 
 共发布 28 个通道：API 密钥 Provider、使用服务账号或 SigV4 认证的云平台、聚合网关，以及 CLI 模拟
@@ -250,10 +250,11 @@ Realtime 通话从服务端计量：代理为返回的 call id 打开 OpenAI 的
 
 `gproxy-admin` 持有 DTO 和一个纯分发函数。每个宿主都为 `/admin/api/**` 与 `/portal/api/**`
 调用同一个分发；没有框架特定的管理路由器。管理 DTO 派生出 TypeScript 定义，作为 `cargo test`
-的一部分重新生成，控制台导入这些生成文件而不自己声明 — 手写的 Rust 类型镜像即便恰好一致也是 bug。
+的一部分重新生成，Web 应用导入这些生成文件而不自己声明 — 手写的 Rust 类型镜像即便恰好一致也是 bug。
 
-同一个二进制用一个 React 应用提供三个界面：`/` 的公开产品页、`/admin` 的操作控制台、`/portal`
-的用户门户。参见[控制台、门户与公开站点](/zh-cn/guides/console/)。
+同一个二进制提供一个 React 应用——`/portal` 的用户门户——以及 `/admin/api/**`
+的管理 API 及其进程内 MCP 服务。参见[门户与 Web 界面](/zh-cn/guides/console/)和
+[管理 API 与 MCP](/zh-cn/reference/admin-api/)。
 
 ## 各宿主额外提供什么
 

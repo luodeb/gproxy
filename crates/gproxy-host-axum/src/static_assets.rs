@@ -9,17 +9,13 @@ use rust_embed::RustEmbed;
 struct WebAssets;
 
 pub(crate) fn asset_path(parts: &Parts) -> Option<&str> {
-    if parts.method != Method::GET && parts.method != Method::HEAD {
+    if !is_read(parts) {
         return None;
     }
     let path = parts.uri.path();
     if path == "/build-info.js" {
         Some("build-info.js")
-    } else if path == "/"
-        || path == "/admin"
-        || path.starts_with("/admin/")
-        || matches!(path, "/portal" | "/portal/")
-    {
+    } else if path == "/" || path == "/portal" || portal_section(path) {
         Some("index.html")
     } else {
         path.strip_prefix('/').filter(|path| {
@@ -30,6 +26,42 @@ pub(crate) fn asset_path(parts: &Parts) -> Option<&str> {
                 )
         })
     }
+}
+
+/// A portal deep link (a client-side route), as opposed to `/portal/api/**`.
+/// The distinction matters because callers use `asset_path` to decide whether a
+/// request is a static asset and may skip admission accounting for those.
+fn portal_section(path: &str) -> bool {
+    path.starts_with("/portal/") && !path.starts_with("/portal/api/")
+}
+
+/// The operator console is not part of this build; only the user portal is.
+/// Old bookmarks under `/admin/**` still resolve, because people and scripts
+/// have them, but the HTML surface they reached no longer exists. `/admin/api`
+/// is handled earlier in the request pipeline and never sees this redirect.
+pub(crate) fn portal_redirect(parts: &Parts) -> Option<Response<Bytes>> {
+    if !is_read(parts) {
+        return None;
+    }
+    let path = parts.uri.path();
+    if path != "/admin" && !path.starts_with("/admin/") {
+        return None;
+    }
+    let mut response = Response::new(Bytes::new());
+    *response.status_mut() = StatusCode::FOUND;
+    response
+        .headers_mut()
+        .insert(http::header::LOCATION, HeaderValue::from_static("/portal"));
+    response.headers_mut().insert(
+        http::header::CACHE_CONTROL,
+        HeaderValue::from_static("no-store"),
+    );
+    Some(response)
+}
+
+/// Only `GET` and `HEAD` reach the embedded assets; anything else is API traffic.
+fn is_read(parts: &Parts) -> bool {
+    parts.method == Method::GET || parts.method == Method::HEAD
 }
 
 pub(crate) fn serve(parts: &Parts) -> Option<Response<Bytes>> {
@@ -110,4 +142,70 @@ fn text(status: StatusCode, body: &'static str) -> Response<Bytes> {
         HeaderValue::from_static("text/plain; charset=utf-8"),
     );
     response
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parts(method: Method, path: &str) -> Parts {
+        http::Request::builder()
+            .method(method)
+            .uri(path)
+            .body(())
+            .expect("request")
+            .into_parts()
+            .0
+    }
+
+    #[test]
+    fn portal_deep_links_serve_the_application_shell() {
+        for path in ["/", "/portal", "/portal/", "/portal/keys", "/portal/usage"] {
+            assert_eq!(
+                asset_path(&parts(Method::GET, path)),
+                Some("index.html"),
+                "{path} should serve the shell"
+            );
+        }
+    }
+
+    #[test]
+    fn hashed_assets_and_icons_are_served_but_arbitrary_paths_are_not() {
+        assert_eq!(
+            asset_path(&parts(Method::GET, "/assets/index-abc.js")),
+            Some("assets/index-abc.js")
+        );
+        assert_eq!(
+            asset_path(&parts(Method::GET, "/favicon.ico")),
+            Some("favicon.ico")
+        );
+        // Gateway traffic and unknown admin pages must not fall back to the shell.
+        assert_eq!(asset_path(&parts(Method::GET, "/v1/models")), None);
+        assert_eq!(asset_path(&parts(Method::GET, "/admin")), None);
+        assert_eq!(asset_path(&parts(Method::GET, "/portal/api/keys")), None);
+    }
+
+    #[test]
+    fn only_read_methods_reach_the_embedded_assets() {
+        assert_eq!(asset_path(&parts(Method::POST, "/portal")), None);
+        assert_eq!(asset_path(&parts(Method::DELETE, "/portal/keys")), None);
+    }
+
+    #[test]
+    fn admin_page_requests_redirect_to_the_portal() {
+        for path in [
+            "/admin",
+            "/admin/",
+            "/admin/providers",
+            "/admin/identity/users/1",
+        ] {
+            let response = portal_redirect(&parts(Method::GET, path)).expect("redirect");
+            assert_eq!(response.status(), StatusCode::FOUND, "{path}");
+            assert_eq!(response.headers()[http::header::LOCATION], "/portal");
+        }
+        // `/admin/api` is dispatched before this helper, but guard it anyway: an
+        // API response must never be a redirect to the portal.
+        assert!(portal_redirect(&parts(Method::GET, "/portal/keys")).is_none());
+        assert!(portal_redirect(&parts(Method::POST, "/admin/providers")).is_none());
+    }
 }

@@ -76,7 +76,8 @@ default `pro`), `codex_virtual_settings`, `codex_workspace_messages`,
 Non-streaming Responses requests are converted to streaming upstream. Token
 counting is answered locally. Embeddings are unsupported on the `codex`
 channel. Thread-level usage is empty, and rate-limit reset credits report
-none through the CLI; the console can consume them.
+none through the CLI; the admin API can consume them
+(`POST /admin/api/credentials/<id>/quota-reset`).
 
 ## Claude Code
 

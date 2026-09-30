@@ -15,11 +15,11 @@ store。v2 本身继续在 `main` 分支上以 `v2.x.y` tag 维护。本页取�
 | 配置 | 命令行参数与环境变量 | 命令行参数、环境变量、`./.env`、`<data-dir>/.env`；没有配置文件格式。含义相同的名称得以保留（`GPROXY_HOST`、`GPROXY_PORT`、`GPROXY_DATA_DIR`、`GPROXY_DSN`、`GPROXY_REDIS_URL`、`GPROXY_MASTER_KEY`、`GPROXY_ADMIN_USER`、`GPROXY_ADMIN_PASSWORD`、`UPSTASH_URL`、`UPSTASH_TOKEN`） |
 | 持久化 | `GPROXY_PERSISTENCE=db` | `sqlite`（默认）、`libsql`、`postgres` 或 `mysql`；`db` 会被拒绝 |
 | Edge 数据库 | `TURSO_URL`、`TURSO_TOKEN` | `GPROXY_LIBSQL_URL`、`GPROXY_LIBSQL_AUTH_TOKEN` |
-| 首次启动导入 | `GPROXY_IMPORT_FILE` | 已移除；改用 `gproxy migrate` 或控制台的配置导入 |
-| Web 界面 | `/console` | `/admin` 控制台、`/portal` 用户门户、`/` 公开站点；API 位于 `/admin/api/**` 与 `/portal/api/**` |
+| 首次启动导入 | `GPROXY_IMPORT_FILE` | 已移除；改用 `gproxy migrate` 或配置导入路由（`POST /admin/api/import`） |
+| Web 界面 | `/console` | `/portal` 用户门户；API 位于 `/admin/api/**` 与 `/portal/api/**`。非 API 的 `/admin/*` 请求重定向到 `/portal` |
 | 容器 | `latest`、`-musl`、多架构；数据在 `/app/data` | 仅 `ghcr.io/leenhawk/gproxy:<tag>`，linux/amd64；数据在 `/var/lib/gproxy`；以 `gproxy` 用户运行 |
 | 更新 channel | 实例设置 `update_channel` | `releases`、`staging`、`dev`；预发布构建位于 `dev`。该设置会被导入 |
-| 规则 | 重写规则与消息重写 | 统一的规则工作区：附加到 Provider 的规则集，以及每个 Provider 的路由规则 |
+| 规则 | 重写规则与消息重写 | 单一规则层：附加到 Provider 的规则集，加上每个 Provider 的路由规则，均通过管理 API 编辑 |
 
 见[配置](/zh-cn/reference/configuration/)、[容器部署](/zh-cn/deployment/docker/)
 和[路由规则与规则集](/zh-cn/guides/rules/)。
@@ -95,7 +95,7 @@ dry run wrote nothing; rerun with --apply to import
 | v2 表 | 后果 |
 | --- | --- |
 | `route_permissions` | 没有任何权限行被带过来。当没有权限匹配调用方时 v3 会拒绝请求。管理员之所以仍有访问权，仅仅是因为导入器为他们显式写入了一条允许全部的权限；其他所有用户、团队或组织都需要在客户端恢复使用前授予权限。 |
-| `rate_limits` | 在控制台中重新创建限流。 |
+| `rate_limits` | 通过 `POST /admin/api/rate-limits` 重新创建限流。 |
 | `upstream_requests`、`downstream_requests`、`audit_logs` | 请求日志和管理审计从零开始。 |
 | `credential_statuses`、`credential_model_statuses`、`credential_quota_cycles`、`credential_quota_cycle_models`、`credential_usage_daily` | 凭证健康与配额周期状态由实际流量重建。 |
 | `usage_rollups` | 由导入的用量行重新计算。 |
@@ -157,10 +157,12 @@ metrics 和非负计数器；若记录产生后对应控制实体被删除，则
    ```
 
 5. 用相同参数加上 `--apply` 执行。
-6. 用同一数据目录启动 v3 并打开 `/admin`。使用 v2 的管理员凭据登录；由于管理员
-   已被导入，不会出现初始化表单。
-7. 验证：Provider 页显示预期的通道和凭证数量，路由页显示成员和对外模型，价格页
-   显示规则和费率，用量页显示历史。授予权限后，用一个已有的用户密钥发送请求。
+6. 用同一数据目录启动 v3 并打开 `/portal`。使用 v2 的管理员凭据登录；由于管理员
+   已被导入，无需初始化请求。
+7. 通过管理 API 验证：`GET /admin/api/providers` 显示预期的通道和凭证数量，
+   `GET /admin/api/routes` 显示成员和对外模型，`GET /admin/api/price-rules` 显示规则
+   和费率，`GET /admin/api/usage` 显示历史。授予权限后，用一个已有的用户密钥发送
+   请求。
 
 容器通过其入口运行同一个子命令；见[容器部署](/zh-cn/deployment/docker/)。
 

@@ -1,6 +1,6 @@
 ---
 title: 新增通道
-description: "内置通道的结构、它实现的 Channel 契约、注册位置，以及控制台无需新增界面即可自动识别的内容"
+description: "内置通道的结构、它实现的 Channel 契约、注册位置，以及管理 API 无需新增界面即可暴露的内容"
 ---
 
 通道是某一上游家族的适配器：它知道 URL、如何注入凭证、如何读取流、如何提取用
@@ -54,16 +54,16 @@ future。`prepare` 不得执行 I/O。
 
 ## 声明的字段
 
-控制台没有任何通道专属界面。它为通道渲染的一切都来自描述符，经由
+管理 API 没有通道专属界面。为通道暴露的一切都来自描述符，经由
 `GET /admin/api/channels` 获取：
 
 | 字段 | 用途 |
 | --- | --- |
 | `provider_fields` | 类型化的 Provider 设置。控件：`text`、`secret`、`url`、`integer`、`boolean`、`string_list`、`select`（带 `options` 与 `default_value`）；`required` 与 `advanced` 标志。 |
 | `credential_fields` | 粘贴凭证时机密的形状：`api_key`；`access_token` 与 `refresh_token`；服务账号字段。 |
-| `endpoint_overrides` | 设置标签页是否提供按操作的端点 URL 覆盖；键来自 `endpoint_override_key`。 |
+| `endpoint_overrides` | 是否提供按操作的端点 URL 覆盖；键来自 `endpoint_override_key`。 |
 | `traffic_policy` | 通道转发的请求头、响应头与查询参数；操作员可按 Provider 覆盖。 |
-| `login` | 凭证向导的模式与参数。 |
+| `login` | 凭证登录流程的模式与参数。 |
 
 尽量复用 `crates/gproxy-channels/src/metadata.rs` 中的字段集（`BASE_URL`、
 `OPENAI_CACHE`、`CLAUDE`、`API_KEY`、`OAUTH`、`SERVICE_ACCOUNT` 等）。标签来
@@ -141,8 +141,8 @@ API 密钥类通道可参考 `crates/gproxy-channels/src/openai/`，带登录、
    标都能构建的代码。
 4. 为新增的字段键补充语言文件条目。
 
-此外无需其他工作：创建 Provider 时会从 `routing_table()` 播种路由规则，供应
-商页面会列出该通道，凭证向导会跟随 `login()`。
+此外无需其他工作：创建 Provider 时会从 `routing_table()` 播种路由规则，
+`GET /admin/api/channels` 会列出该通道，凭证登录流程会跟随 `login()`。
 
 ## 测试
 

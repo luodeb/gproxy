@@ -16,11 +16,11 @@ To v2".
 | Configuration | Flags and environment | Flags, environment, `./.env`, `<data-dir>/.env`; no configuration file format. Names are kept where the meaning matched (`GPROXY_HOST`, `GPROXY_PORT`, `GPROXY_DATA_DIR`, `GPROXY_DSN`, `GPROXY_REDIS_URL`, `GPROXY_MASTER_KEY`, `GPROXY_ADMIN_USER`, `GPROXY_ADMIN_PASSWORD`, `UPSTASH_URL`, `UPSTASH_TOKEN`) |
 | Persistence | `GPROXY_PERSISTENCE=db` | `sqlite` (default), `libsql`, `postgres`, or `mysql`; `db` is rejected |
 | Edge database | `TURSO_URL`, `TURSO_TOKEN` | `GPROXY_LIBSQL_URL`, `GPROXY_LIBSQL_AUTH_TOKEN` |
-| First-boot import | `GPROXY_IMPORT_FILE` | Gone; use `gproxy migrate` or the console's config import |
-| Web surfaces | `/console` | `/admin` console, `/portal` user portal, `/` public site; APIs under `/admin/api/**` and `/portal/api/**` |
+| First-boot import | `GPROXY_IMPORT_FILE` | Gone; use `gproxy migrate` or the config import route (`POST /admin/api/import`) |
+| Web surfaces | `/console` | The user portal at `/portal`; the admin API under `/admin/api/**` and `/portal/api/**`. Non-API `/admin/*` requests redirect to `/portal` |
 | Container | `latest`, `-musl`, multi-arch; data in `/app/data` | `ghcr.io/leenhawk/gproxy:<tag>` only, linux/amd64; data in `/var/lib/gproxy`; runs as `gproxy` |
 | Update channels | `update_channel` instance setting | `releases`, `staging`, `dev`; prerelease builds live on `dev`. The setting is imported |
-| Rules | Rewrite rules and message rewrite | One Rules workspace: rule sets attached to providers, routing rules per provider |
+| Rules | Rewrite rules and message rewrite | One rule layer: rule sets attached to providers, plus per-provider routing rules, all through the admin API |
 
 See [Configuration](/reference/configuration/), [Container](/deployment/docker/),
 and [Routing Rules & Rule Sets](/guides/rules/).
@@ -100,7 +100,7 @@ The importer reads only the tables above. These v2 tables are skipped:
 | v2 table | Consequence |
 | --- | --- |
 | `route_permissions` | No permission rows come across. v3 denies a request when no permission matches the caller. Administrators keep access only because the importer writes them an explicit allow-all permission; every other user, team, or organization needs permissions granted before clients resume. |
-| `rate_limits` | Recreate rate limits in the console. |
+| `rate_limits` | Recreate rate limits through `POST /admin/api/rate-limits`. |
 | `upstream_requests`, `downstream_requests`, `audit_logs` | Request logs and the admin audit trail start fresh. |
 | `credential_statuses`, `credential_model_statuses`, `credential_quota_cycles`, `credential_quota_cycle_models`, `credential_usage_daily` | Credential health and quota-cycle state is rebuilt from live traffic. |
 | `usage_rollups` | Recomputed from the imported usage rows. |
@@ -171,13 +171,14 @@ Two rules apply to the target:
    ```
 
 5. Apply with the same arguments plus `--apply`.
-6. Start v3 with the same data directory and open `/admin`. Log in with
-   your v2 administrator credentials; the setup form does not appear because
+6. Start v3 with the same data directory and open `/portal`. Log in with
+   your v2 administrator credentials; the setup call is not needed because
    the administrator was imported.
-7. Verify: Providers show the expected channels and credential counts,
-   Routes show members and exposed models, Pricing shows the rules and
-   rates, Usage shows the history. Grant permissions, then send a request
-   with an existing user key.
+7. Verify through the admin API: `GET /admin/api/providers` shows the
+   expected channels and credential counts, `GET /admin/api/routes` shows
+   members and exposed models, `GET /admin/api/price-rules` shows the rules and
+   rates, and `GET /admin/api/usage` shows the history. Grant permissions, then
+   send a request with an existing user key.
 
 A container runs the same subcommand through its entrypoint; see
 [Container](/deployment/docker/).

@@ -6,7 +6,7 @@ description: "命令行参数、GPROXY_* 环境变量、.env 分层、原生宿�
 GPROXY 在启动时一次性读取进程配置，来源是命令行参数、环境变量和 `.env`
 文件。除 `.env` 之外没有别的配置文件：v3 不读取 TOML。运行期间会变化的
 一切——Provider、凭证、路由、规则、定价、身份，以及本页末尾的实例设置——
-都保存在数据库中，通过控制台或 admin API 编辑。
+都保存在数据库中，通过管理 API 编辑。
 
 `gproxy --help` 与环境变量列表由同一份声明生成，两者不会漂移。每个参数都
 有对应的 `GPROXY_*` 环境变量；下表同时列出两者。
@@ -110,8 +110,8 @@ DSN 格式与各后端行为见[存储与缓存后端](/zh-cn/reference/database
 | `GPROXY_TRUSTED_PROXIES` | `--trusted-proxy <IP>` | 空 | 逗号分隔的 IP。仅当对端是回环地址或列表中的地址时，才采信 `X-Forwarded-For`（第一项）和 `X-Real-IP`。 |
 | `GPROXY_CORS_ORIGINS` | `--cors-origin <ORIGIN>` | 空 | 逗号分隔的精确 Origin。为空则不发送 CORS 头（仅同源）。允许的方法 `GET, POST, PATCH, DELETE, OPTIONS`；允许的头 `authorization, content-type, x-api-key`；允许携带凭据。 |
 | `GPROXY_MAX_ATTEMPTS` | `--max-attempts <COUNT>` | `6` | 单个请求上游尝试次数的上限。路由自身的 `max_attempts` 受它约束。必须为正数。 |
-| `GPROXY_MAX_IN_FLIGHT` | `--max-in-flight <COUNT>` | `1024` | 监听器同时服务的请求数。每个请求（包括控制台和 admin API）都占用一个许可；超出的请求排队等待。必须为正数。 |
-| `GPROXY_FILE_UPLOAD_MAX_IN_FLIGHT` | `--file-upload-max-in-flight <COUNT>` | 未设置 | 本进程 `POST /v1/files` 和 `POST /upload/v1beta/files` 的上传并发数。`0` 表示不限制。设置后覆盖控制台中的同名设置。 |
+| `GPROXY_MAX_IN_FLIGHT` | `--max-in-flight <COUNT>` | `1024` | 监听器同时服务的请求数。每个请求（包括门户和 admin API）都占用一个许可；超出的请求排队等待。必须为正数。 |
+| `GPROXY_FILE_UPLOAD_MAX_IN_FLIGHT` | `--file-upload-max-in-flight <COUNT>` | 未设置 | 本进程 `POST /v1/files` 和 `POST /upload/v1beta/files` 的上传并发数。`0` 表示不限制。设置后覆盖 `file_upload_max_in_flight` 实例设置。 |
 | `GPROXY_INSTANCE_ID` | `--instance-id <ID>` | `0` | 原生请求 ID 的首段（`<instance>-<启动前缀>-<序号>`）。多实例部署请为每个实例设置不同的值。 |
 | `GPROXY_LOG_FORMAT` | `--log-format <FORMAT>` | `text` | `text` 或 `json`（按行分隔）。 |
 | `RUST_LOG` | — | `info` | 原生日志的标准 `tracing` 过滤器。只从进程环境变量读取。 |
@@ -122,13 +122,14 @@ DSN 格式与各后端行为见[存储与缓存后端](/zh-cn/reference/database
 ## 首次启动引导
 
 以下变量作用于全新存储，即尚无管理员的存储。未设置 `GPROXY_ADMIN_PASSWORD`
-时，首次访问 `/admin` 会显示创建管理员的初始化页面。
+时，用 `POST /admin/api/setup` 创建管理员。
 
 | 变量 | 参数 | 默认值 | 含义 |
 | --- | --- | --- | --- |
 | `GPROXY_ADMIN_USER` | `--admin-user <USER>` | `admin` | 引导时使用的管理员用户名。 |
 | `GPROXY_ADMIN_PASSWORD` | `--admin-password <PASSWORD>` | 未设置 | 全新存储：用此密码创建管理员并生成一个 API 密钥。已有存储：若该用户存在则重置其密码；其他账户永不改动。 |
-| `GPROXY_BOOTSTRAP_ADMIN_API_KEY` | `--bootstrap-admin-api-key <KEY>` | 自动生成 | 仅对全新存储、且仅在设置了 `GPROXY_ADMIN_PASSWORD` 时生效：管理员的第一个 API 密钥。未设置则随机生成。无论哪种方式，密钥都会像其他密钥一样密封存储，只能通过控制台的"显示"操作查看。空白值是错误。 |
+| `GPROXY_BOOTSTRAP_ADMIN_API_KEY` | `--bootstrap-admin-api-key <KEY>` | 自动生成 | 仅对全新存储、且仅在设置了 `GPROXY_ADMIN_PASSWORD` 时生效：管理员的第一个 API 密钥。未设置则随机生成。无论哪种方式，密钥都会像其他密钥一样密封存储，只能通过用户密钥的 reveal 路由
+查看（`POST /admin/api/user-keys/<id>/reveal`）。空白值是错误。 |
 | `GPROXY_BOOTSTRAP_CHANNELS` | `--bootstrap-channel <CHANNEL>` | 空 | 逗号分隔的通道 ID。仅对全新存储、且设置了 `GPROXY_ADMIN_PASSWORD` 时生效：为每个通道创建一个同名的已启用 Provider，并附上该通道的默认规则集。未知 ID 是启动错误。 |
 
 全新存储上设置了引导密钥或通道却未设置 `GPROXY_ADMIN_PASSWORD` 是启动
@@ -142,9 +143,10 @@ DSN 格式与各后端行为见[存储与缓存后端](/zh-cn/reference/database
 
 | 变量 | 默认值 | 含义 |
 | --- | --- | --- |
-| `GPROXY_AUTOSTART` | `on` | 按用户登录启动项（Linux `.desktop`、macOS LaunchAgent、Windows Run 键）的首次运行默认值。只读取一次，直到 `<data-dir>/.autostart-initialized` 存在；之后由控制台的"登录时启动"开关管理。接受 `on`/`off`、`true`/`false`、`1`/`0`、`yes`/`no`、`enable(d)`/`disable(d)`。保存的启动命令会重复当前参数，并在环境中存在 `GPROXY_MASTER_KEY` 时追加 `--master-key`。 |
+| `GPROXY_AUTOSTART` | `on` | 按用户登录启动项（Linux `.desktop`、macOS LaunchAgent、Windows Run 键）的首次运行默认值。只读取一次，直到 `<data-dir>/.autostart-initialized` 存在；之后由自启动 API
+（`GET`/`PUT /admin/api/native/autostart`）管理。接受 `on`/`off`、`true`/`false`、`1`/`0`、`yes`/`no`、`enable(d)`/`disable(d)`。保存的启动命令会重复当前参数，并在环境中存在 `GPROXY_MASTER_KEY` 时追加 `--master-key`。 |
 | `GPROXY_UPDATE_CHANNEL_SERVE` | 构建通道 | 优先级最高的更新通道：`releases`（也接受 `release`、`stable`）、`staging` 或 `dev`（也接受 `development`）。 |
-| `GPROXY_UPDATE_CHANNEL` | 构建通道 | 取值相同；`GPROXY_UPDATE_CHANNEL_SERVE` 未设置时生效。完整优先级：`_SERVE`，然后 `GPROXY_UPDATE_CHANNEL`，然后控制台的更新通道设置，最后是构建通道。名称无效时更新请求返回 400。 |
+| `GPROXY_UPDATE_CHANNEL` | 构建通道 | 取值相同；`GPROXY_UPDATE_CHANNEL_SERVE` 未设置时生效。完整优先级：`_SERVE`，然后 `GPROXY_UPDATE_CHANNEL`，然后 `update_channel` 实例设置，最后是构建通道。名称无效时更新请求返回 400。 |
 | `GPROXY_UPDATE_SERVE` | GitHub release URL | 覆盖所有通道的 manifest URL。默认：`dev` 和 `staging` 读取 `releases/download/<channel>/manifest.json`，`releases` 读取 `releases/latest/download/manifest.json`，均来自 GPROXY 仓库。 |
 | `GPROXY_UPDATE_RESTART` | `re-exec` | 应用更新或回滚之后的动作：`re-exec`（也接受 `reexec`；Unix 上以相同参数 exec 新二进制，其他平台退出码 42）、`supervisor`（250 ms 后以退出码 42 退出，交给守护进程重启）或 `none`（由你重启）。值无效会禁用自更新，其端点返回 503。 |
 
@@ -180,11 +182,11 @@ wasm 宿主没有命令行，也不读 `.env`。平台包装层把同名绑定�
 
 ## 实例设置
 
-运行时设置保存在 `settings` 表中，在控制台 → 设置里编辑
+运行时设置保存在 `settings` 表中，通过管理 API 编辑
 （`GET`/`PATCH /admin/api/instance-settings` 和 `/admin/api/log-settings`），
 无需重启即生效。
 
-| 键 | 控制台标签 | 默认值 | 含义 |
+| 键 | 标签 | 默认值 | 含义 |
 | --- | --- | --- | --- |
 | `instance_name` | 实例名称 | `default` | 在日志和遥测中显示。 |
 | `proxy` | 默认上游代理 | 无 | 在凭证和 Provider 代理之后使用；`GPROXY_UPSTREAM_PROXY_URL` 会覆盖它。 |
@@ -200,11 +202,11 @@ wasm 宿主没有命令行，也不读 `.env`。平台包装层把同名绑定�
 | `enable_upstream_log`、`enable_upstream_log_body` | 上游元数据 / 正文 | — | 记录每次上游尝试，可选记录正文。 |
 | `disable_log_redaction` | 停用日志脱敏 | 关 | 以明文存储捕获的头和正文。脱敏默认开启。 |
 | `traffic_blacklist` | 全局元数据黑名单 | 内置列表 | 在内置列表之上，实例范围内额外移除的请求头、响应头和 query 参数名。 |
-| `update_channel`、`enable_auto_update_check` | 更新 | 构建通道 | 控制台对更新通道和自动检查的偏好。 |
+| `update_channel`、`enable_auto_update_check` | 更新 | 构建通道 | 保存的更新通道和自动检查偏好。 |
 
 Hugging Face Token 密封存放在单独的表（`tokenizer_auth`）中，不在
-`settings` 里。同一控制台页面上的登录启动和更新操作由原生宿主提供，不经
-过数据库。
+`settings` 里。登录启动和更新操作由原生宿主提供，
+不经过数据库。
 
 ## 关闭
 

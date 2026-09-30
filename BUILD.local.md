@@ -46,7 +46,7 @@ cargo 依赖走 rsproxy 镜像（`/root/.cargo/config.toml` 已配置）。
 ## 2. 重要：构建顺序
 
 前端产物通过 `rust-embed` **编译期固化**进二进制（`crates/gproxy-host-axum/assets/web/`）。
-**必须先构建前端、再构建 Rust**，否则 `/admin` 会 404。
+**必须先构建前端、再构建 Rust**，否则 `/portal` 会 404。
 
 ```sh
 cd /root/codes/gproxy/console
@@ -117,7 +117,7 @@ ldd  target/x86_64-unknown-linux-musl/release/gproxy   # not a dynamic executabl
 ### 踩过的坑
 
 1. **rustc 必须 >= 1.98**（`wreq` 要求）。
-2. **先前端后 Rust**——否则 `/admin` 404；改动前端后 cargo 不会自动重编，
+2. **先前端后 Rust**——否则 `/portal` 404；改动前端后 cargo 不会自动重编，
    需 `touch crates/gproxy-host-axum/src/static_assets.rs` 才能重新嵌入（二进制会从 ~38MB 变 ~49MB）。
 3. **zig ar 不能用**：BoringSSL 构建报 `ar: error: expected [relpos] for 'a', 'b', or 'i' modifier`。
    换系统 `/usr/bin/ar` 解决。

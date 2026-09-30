@@ -50,11 +50,12 @@
       "unknown": "Unknown"
     },
     "account": {
-      "logout": "Sign out"
+      "logout": "Sign out",
+      "settings": "Settings",
+      "openMenu": "Account menu"
     },
     "login": {
-      "description": "Sign in with the account created by your administrator.",
-      "checking": "Checking your session…"
+      "description": "Sign in with the account created by your administrator."
     },
     "keys": {
       "title": "API keys",
@@ -64,7 +65,16 @@
       "created": "Copy this key now. It will not be shown again.",
       "unnamed": "Unnamed key",
       "revoke": "Revoke",
-      "empty": "No keys yet"
+      "empty": "No keys yet",
+      "reveal": "Reveal key",
+      "revealed": "Key revealed. It will be masked again shortly.",
+      "revealError": "Could not reveal this key. Retry.",
+      "notRevealable": "This key cannot be revealed.",
+      "copy": "Copy full key",
+      "copied": "Full key copied.",
+      "copyError": "Could not copy the key. Select it and copy manually.",
+      "remask": "Mask key",
+      "masked": "{{prefix}}••••••••••••"
     },
     "password": {
       "title": "Password",
@@ -164,124 +174,28 @@
         "complete": "Complete",
         "interrupted": "Interrupted"
       }
-    }
-  },
-  "public": {
+    },
     "nav": {
-      "label": "Public site navigation",
-      "admin": "Admin console",
-      "portal": "User login"
+      "label": "Portal navigation",
+      "open": "Open navigation",
+      "close": "Close navigation",
+      "resize": "Resize navigation",
+      "overview": "Overview",
+      "connect": "Connect",
+      "usage": "Usage",
+      "keys": "API keys",
+      "sessions": "Authorized sessions"
     },
-    "hero": {
-      "title": "Your tools. Your models. One gateway.",
-      "description": "Point OpenAI, Claude, Gemini, Codex CLI, or Claude Code at GPROXY. It handles translation, credential pooling, failover, quotas, and billing without changing how your clients work.",
-      "labLabel": "Request translation example",
-      "switchLabel": "Translate to",
-      "clientLabel": "Client request",
-      "providerLabel": "Upstream request",
-      "passthrough": "No translation needed · request passes through unchanged",
-      "summary": "{{rewritten}} lines changed · {{kept}} kept unchanged",
-      "dialects": {
-        "openai": "OpenAI Chat",
-        "claude": "Claude Messages",
-        "gemini": "Gemini"
-      },
-      "endpoints": {
-        "openai": "POST /v1/chat/completions",
-        "claude": "POST /v1/messages",
-        "gemini": "POST /v1beta/models/reviewer:generateContent"
-      },
-      "clientCode": "{\n  \"model\": \"reviewer\",\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": \"Inspect src/auth.rs for a refresh race.\"\n  }],\n  \"tools\": [{\n    \"type\": \"function\",\n    \"function\": {\n      \"name\": \"read_file\",\n      \"description\": \"Read a repository file.\",\n      \"parameters\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"path\": { \"type\": \"string\" }\n        },\n        \"required\": [\"path\"]\n      }\n    }\n  }],\n  \"tool_choice\": \"auto\"\n}",
-      "wires": {
-        "openai": "{\n  \"model\": \"reviewer\",\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": \"Inspect src/auth.rs for a refresh race.\"\n  }],\n  \"tools\": [{\n    \"type\": \"function\",\n    \"function\": {\n      \"name\": \"read_file\",\n      \"description\": \"Read a repository file.\",\n      \"parameters\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"path\": { \"type\": \"string\" }\n        },\n        \"required\": [\"path\"]\n      }\n    }\n  }],\n  \"tool_choice\": \"auto\"\n}",
-        "claude": "{\n  \"model\": \"reviewer\",\n  \"max_tokens\": 1024,\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": \"Inspect src/auth.rs for a refresh race.\"\n  }],\n  \"tools\": [{\n    \"name\": \"read_file\",\n    \"description\": \"Read a repository file.\",\n    \"input_schema\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"path\": { \"type\": \"string\" }\n      },\n      \"required\": [\"path\"]\n    }\n  }],\n  \"tool_choice\": { \"type\": \"auto\" }\n}",
-        "gemini": "{\n  \"contents\": [{\n    \"role\": \"user\",\n    \"parts\": [{\n      \"text\": \"Inspect src/auth.rs for a refresh race.\"\n    }]\n  }],\n  \"tools\": [{\n    \"functionDeclarations\": [{\n      \"name\": \"read_file\",\n      \"description\": \"Read a repository file.\",\n      \"parameters\": {\n        \"type\": \"OBJECT\",\n        \"properties\": {\n          \"path\": { \"type\": \"STRING\" }\n        },\n        \"required\": [\"path\"]\n      }\n    }]\n  }],\n  \"toolConfig\": {\n    \"functionCallingConfig\": { \"mode\": \"AUTO\" }\n  }\n}"
-      }
+    "settings": {
+      "title": "Settings",
+      "description": "Manage the password you sign in with and your display preferences.",
+      "appearance": "Appearance and language",
+      "appearanceDescription": "Theme and language apply to this browser only.",
+      "account": "Signed in as {{name}}"
     },
-    "funnel": {
-      "title": "Every request takes the same path.",
-      "description": "Whether it comes from an SDK or a vendor CLI, every request goes through the same routing, failover, quota, settlement, and telemetry pipeline. No hidden shortcuts. No missed billing.",
-      "pipelineLabel": "GPROXY request execution pipeline",
-      "funnelLabel": "Mandatory response settlement stages",
-      "caption": "Every response has its settlement queued before it leaves GPROXY.",
-      "stages": {
-        "ingress": "ingress",
-        "classify": "classify",
-        "auth": "auth",
-        "route": "route",
-        "admit": "admit",
-        "transform": "transform",
-        "upstream": "upstream",
-        "settle": "settle",
-        "capture": "capture",
-        "telemetry": "telemetry"
-      }
-    },
-    "claims": {
-      "pairwise": {
-        "title": "Protocol details stay intact.",
-        "body": "GPROXY translates directly between real provider formats instead of squeezing every request through a lossy common schema."
-      },
-      "unknown": {
-        "title": "New provider fields do not disappear.",
-        "body": "Fields GPROXY does not recognize yet are preserved, so provider updates can still reach your client."
-      },
-      "cli": {
-        "title": "Codex CLI and Claude Code just work.",
-        "body": "Use their normal login and request flows while GPROXY supplies pooled credentials and keeps every request metered."
-      },
-      "providers": {
-        "title": "Multiple providers. One base URL.",
-        "body": "Pool credentials, fail over between routes, and enforce spending limits without reconfiguring every client."
-      },
-      "runtime": {
-        "title": "Deploy it where you need it.",
-        "body": "Run GPROXY as a native server or put the same core behind an edge worker."
-      }
-    },
-    "performance": {
-      "title": "Fast enough to forget it is there.",
-      "description": "Rust, a zero-copy data plane, and a control plane that lives in memory. Metering happens after the reply has left, through a bounded queue that batches settlements into grouped commits. Measured end to end on one 16-thread machine with SQLite, with authentication, routing, pricing, and usage recording all switched on.",
-      "stats": {
-        "latency": {
-          "value": "0.21 ms",
-          "label": "added latency",
-          "body": "Median time the gateway adds to a request on a single connection."
-        },
-        "throughput": {
-          "value": "27,000 req/s",
-          "label": "metered throughput",
-          "body": "Fully priced and recorded requests per second at 32 connections."
-        },
-        "connections": {
-          "value": "20,000",
-          "label": "concurrent connections",
-          "body": "Held open against a 500 ms upstream with zero errors and every request in the ledger."
-        },
-        "routing": {
-          "value": "108,000 req/s",
-          "label": "auth and routing",
-          "body": "Authentication and route resolution alone, with no upstream in the path."
-        }
-      },
-      "caption": "Client, gateway, and mock upstream shared the same cores. A dedicated host does better."
-    },
-    "connect": {
-      "title": "Bring the client you already use.",
-      "description": "Copy an example for your SDK or CLI. Sign in to see the models available to your account and create an API key.",
-      "modelPlaceholder": "your-model",
-      "note": "Your models and API keys are waiting in the user portal.",
-      "portalLink": "Open the portal",
-      "methodsLabel": "Connection examples",
-      "copy": "Copy",
-      "copied": "Copied",
-      "copyFailed": "Copy failed"
-    },
-    "version": "v{{version}}",
-    "footer": {
-      "label": "Project links",
-      "license": "AGPL-3.0",
-      "source": "Source"
+    "sessions": {
+      "title": "Authorized sessions",
+      "description": "Applications you have signed in to with OAuth. Revoke one to cut off its access and refresh tokens."
     }
   }
 }

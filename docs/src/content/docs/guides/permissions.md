@@ -11,9 +11,8 @@ against every row on its chain:
 api key -> user -> team -> organization
 ```
 
-The console's **Access** card on any of these shows the rows set at that
-level together with the rows inherited from its parents, labelled
-"Inherited from ...".
+The rows set at a level are evaluated together with the rows inherited from
+its parents; a row at any level applies to every request on the chain below it.
 
 ## Permissions
 
@@ -109,18 +108,19 @@ Every rejection is a JSON error envelope:
 
 ## Watching Windows
 
-**Usage** in the console lists every active quota window with a bar: settled
-cost over the limit, the percentage, when the window started, and when it
-resets. Bars turn to warning at 85% and critical at 100%. An anchored 5-hour
-or 7-day window that has not seen a request shows "not started". The portal
-shows the same bars for the signed-in user's chain, labelled by scope.
+`GET /admin/api/quota-windows` lists every active quota window with the
+settled cost over the limit, the percentage, when the window started, and when
+it resets. An anchored 5-hour or 7-day window that has not seen a request is
+reported as not started. The portal shows the same windows for the signed-in
+user's chain, labelled by scope.
 
 ## Upstream Quota Cycles
 
 Credentials on `codex`, `claudecode`, and `geminicli` report the upstream
 account's own rate-limit windows. GPROXY records them as **quota cycles** per
 credential and window key, with the boundary source (upstream, inferred, or
-unknown) and used percent, and shows them on the credential card. They
+unknown) and used percent; `GET /admin/api/credential-cycles` lists them.
+They
 describe the upstream account, not your users, and are separate from the
 quotas on this page. They do steer balancing: inside a failover tier, a
 credential with any live window at 90% or more sorts behind its peers, and one

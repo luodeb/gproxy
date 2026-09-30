@@ -3,8 +3,8 @@ title: Installation
 description: Install each GPROXY package, find the data directory and logs, complete first boot, update, manage login startup, and uninstall.
 ---
 
-GPROXY is one executable, `gproxy`, with the console, portal, and public site
-embedded. Every package on the [Downloads](/getting-started/downloads/) page
+GPROXY is one executable, `gproxy`, with the user portal embedded and the
+admin API served alongside it. Every package on the [Downloads](/getting-started/downloads/) page
 contains that executable and differs only in how it is started and where its
 data lives.
 
@@ -21,7 +21,7 @@ an application-menu entry named GPROXY, and `/etc/xdg/autostart/gproxy.desktop`
 so the launcher runs at login. It depends on `curl`, `xdg-utils`, and `zenity`.
 The launcher creates `${XDG_DATA_HOME:-~/.local/share}/gproxy`, writes a
 private `.env` there on first run, starts `gproxy` from that directory when
-`http://127.0.0.1:8787/admin` is not answering, and opens the console. Running
+`http://127.0.0.1:8787/portal` is not answering, and opens the portal. Running
 `gproxy` yourself from a terminal uses `./data` in the current directory
 instead — a separate instance with separate data.
 
@@ -30,7 +30,7 @@ instead — a separate instance with separate data.
 Drag `GPROXY.app` to Applications and open it. The app runs the server from
 `~/Library/Application Support/GPROXY`, writes a private `.env` there on first
 run, registers `~/Library/LaunchAgents/io.github.leenhawk.gproxy.plist` so the
-server starts at login and is kept alive, and opens the console. It has no
+server starts at login and is kept alive, and opens the portal. It has no
 Dock icon. The bundle is ad-hoc signed, not notarized, and requires macOS 11.
 
 ### Windows Microsoft Store (MSIX)
@@ -39,13 +39,13 @@ Store publication is being prepared; use the portable ZIP until a public Store
 listing is available. MSI packages remain on historical releases.
 
 The Store package requires Windows 10 version 2004 or later. Its Start menu
-entry opens first-run setup, starts the server in the background and opens
-Console. Windows owns the immutable program files. Database, keys and logs live
+entry opens first-run setup, starts the server in the background and opens the
+portal. Windows owns the immutable program files. Database, keys and logs live
 under the package's `LocalState\GPROXY` directory. Enable login startup through
 **Windows Settings → Apps → Startup**; it is initially disabled.
 
-Store handles updates. The Console's Updates page directs you to Store, and
-native EXE replacement/rollback endpoints are disabled for this installation.
+Store handles updates. Use Store's own update flow; native EXE
+replacement/rollback endpoints are disabled for this installation.
 When moving from MSI, export your configuration (including secrets if needed),
 stop the old server and disable its autostart before starting the Store version,
 then import the configuration. Old `%LOCALAPPDATA%\GPROXY` data is not silently
@@ -57,7 +57,7 @@ The package id is `io.github.leenhawk.gproxy` and the minimum version is
 Android 9 (API 28). Allow installation from unknown sources, install the APK
 for your ABI, and open GPROXY. The screen has a switch "Start automatically on
 app launch and device boot" (on by default), buttons to start the server, open
-the console, and stop, and a log view. With automatic start on, the app asks
+the portal, and stop, and a log view. With automatic start on, the app asks
 to be excluded from battery optimization. The service copies the binary into
 the app's private storage, writes a private `.env`, listens on
 `127.0.0.1:8787`, and shows a persistent notification while running.
@@ -125,10 +125,11 @@ plaintext until you set the variable yourself.
 
 ## First Boot
 
-Open `http://127.0.0.1:8787/admin`. While the store has no administrator the
-console shows **Create the administrator**; choose a username and password and
-you are signed in. The administrator is a user with the admin flag; the same
-account signs in to the console, and its API keys are ordinary user keys.
+While the store has no administrator, `GET /admin/api/session` reports
+`setup_required: true`; `POST /admin/api/setup` with a username and password
+creates the first administrator and signs it in. The administrator is a user
+with the admin flag; the same account can sign in at `/portal`, and its API
+keys are ordinary user keys.
 
 For unattended setups the administrator can come from the environment:
 
@@ -140,8 +141,9 @@ GPROXY_ADMIN_PASSWORD=<strong password>
 ```
 
 On a fresh store this creates the administrator, issues it an API key (the
-one supplied, or a generated one you read from Identity with the reveal
-action), and creates one enabled provider per listed channel id, named after
+one supplied, or a generated one you read back through
+`POST /admin/api/user-keys/<id>/reveal`), and creates one enabled provider per
+listed channel id, named after
 the channel, with the channel's routing defaults, an empty private rule set,
 and no credentials yet. The
 bootstrap key and channels require `GPROXY_ADMIN_PASSWORD` and are ignored
@@ -152,12 +154,13 @@ unless a reset is intended.
 
 ## Updating
 
-Native installations update from **Updates** in the console. The update
-channel (**Build default**, **Dev (alpha)**, **Stable releases**, **Staging
-(prerelease)**) and the automatic-check switch (off by default) are instance
-settings shared by every administrator. **Check for updates** fetches the
-channel's manifest and shows the installed and latest versions, resolved
-channel, build target, restart mode, and release notes.
+Native installations update through `/admin/api/native/update`, or with
+`gproxy --update`. The update channel and the automatic-check switch (off by
+default) are instance settings shared by every administrator. A check fetches
+the channel's manifest and reports the installed and latest versions,
+resolved channel, build target, restart mode, and release notes. The update
+routes are deliberately outside the MCP tool catalog, so an agent cannot
+replace the running binary.
 
 **Verify and apply** downloads the manifest and refuses it unless its
 Ed25519 signature verifies, its channel matches, it lists the running target
@@ -178,19 +181,20 @@ to install unknown apps.
 The updater uses `GPROXY_UPSTREAM_PROXY_URL` when set. `releases` and `dev`
 compare semantic versions; `staging` compares build hashes.
 
-Microsoft Store installations are updated by Store; use the Store guidance on
-**Updates** instead of the native update and rollback commands above.
+Microsoft Store installations are updated by Store; use the Store guidance
+instead of the native update and rollback commands above.
 
 ## Automatic Startup
 
-**Settings → Automatic startup** manages a per-user autostart entry written by the
-binary itself. On the first start in a data directory the entry is created
+The autostart API (`GET` and `PUT /admin/api/native/autostart`) manages a
+per-user autostart entry written by the binary itself. On the first start in a
+data directory the entry is created
 unless `GPROXY_AUTOSTART=off`; the decision is recorded in
 `.autostart-initialized`. Linux needs a desktop session (`DISPLAY`,
 `WAYLAND_DISPLAY`, or `XDG_CURRENT_DESKTOP`) and is skipped in containers.
 
 Store installations use a package StartupTask instead. Enable or disable it
-in Windows Settings → Apps → Startup; the Console does not write a Run entry.
+in Windows Settings → Apps → Startup; GPROXY does not write a Run entry.
 
 | Platform | Entry |
 | --- | --- |
@@ -200,7 +204,7 @@ in Windows Settings → Apps → Startup; the Console does not write a Run entry
 
 On Android, the APK home screen owns the startup switch and boot receiver.
 In Termux, run `./gproxy` with the usual command-line flags and manage startup
-from the Console. This writes `~/.termux/boot/gproxy.sh`; install Termux:Boot
+through the autostart API. This writes `~/.termux/boot/gproxy.sh`; install Termux:Boot
 and open it once to enable boot execution. The script preserves the working
 directory and bundled library path, requests a wake lock, and writes output
 to `autostart.log` in the data directory. Other Android shells have no automatic
@@ -209,7 +213,7 @@ the Android binary archive.
 
 The entry records the executable, the flags it was started with, the working
 directory, and `--master-key` copied from `GPROXY_MASTER_KEY` when that
-variable was set, so treat it as secret-bearing. Turning the switch off removes
+variable was set, so treat it as secret-bearing. Turning autostart off removes
 the entry and does not stop the running server. The `.deb` autostart file
 and the `.dmg` LaunchAgent belong to the installer's
 launcher and are separate from this switch.
@@ -231,5 +235,5 @@ launcher and are separate from this switch.
 
 - [Quick Start](/getting-started/quick-start/) to configure the first route.
 - [Configuration](/reference/configuration/) for every flag and variable.
-- [Console, Portal & Public Site](/guides/console/) before exposing the
+- [Portal & Web Surface](/guides/console/) before exposing the
   instance beyond localhost.

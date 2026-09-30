@@ -62,7 +62,8 @@ async fn handle_request(
     let path = parts.uri.path().to_owned();
     let query = parts.uri.query().map(str::to_owned);
     let mut headers = parts.headers.clone();
-    // Management stays available even while inference has filled the limit.
+    // Management and static surfaces stay available even while inference has
+    // filled the limit, so an operator can still reach the portal and the API.
     let permit = if path == "/admin"
         || path.starts_with("/admin/")
         || path == "/announcements.js"
@@ -163,6 +164,9 @@ async fn handle_request(
     if (path == "/portal/api" || path.starts_with("/portal/api/"))
         && let Some(response) = state.app.portal_dispatch(&parts, body.clone()).await
     {
+        return crate::response::buffered_response(response, permit, &request_id);
+    }
+    if let Some(response) = crate::static_assets::portal_redirect(&parts) {
         return crate::response::buffered_response(response, permit, &request_id);
     }
     if let Some(response) = crate::static_assets::serve(&parts) {

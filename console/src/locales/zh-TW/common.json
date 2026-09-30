@@ -1,54 +1,19 @@
 {
   "common": {
     "product": "GPROXY",
-    "console": "管理控制台",
-    "name": "名稱",
     "language": "語言",
     "languages": {
       "en": "English",
       "zh-CN": "简体中文",
       "zh-TW": "繁體中文"
     },
-    "loading": "正在載入…",
-    "loadError": "無法載入資料，請重試。",
     "none": "無",
-    "optional": "選填",
-    "required": "必填",
     "search": "搜尋…",
     "actions": {
-      "create": "建立",
-      "save": "儲存",
-      "saving": "正在儲存…",
-      "saved": "已儲存",
-      "cancel": "取消",
-      "reset": "還原",
-      "close": "關閉",
-      "edit": "編輯",
-      "enable": "啟用",
-      "disable": "停用",
-      "add": "新增",
-      "delete": "刪除",
-      "back": "返回"
+      "cancel": "取消"
     },
     "status": {
-      "label": "狀態",
-      "enabled": "已啟用",
-      "disabled": "已停用",
-      "healthy": "健康",
-      "degraded": "部分異常",
-      "dead": "不可用",
-      "unknown": "未知",
-      "open": "進行中",
-      "closed": "已結束",
-      "active": "作用中",
-      "inactive": "非作用中"
-    },
-    "errors": {
-      "load": "無法載入資料，請重試。",
-      "save": "無法儲存變更，請重試。",
-      "invalid": "請檢查標記的欄位。",
-      "required": "此欄位為必填。",
-      "unknown": "未知錯誤"
+      "label": "狀態"
     },
     "batch": {
       "select": "批次",
@@ -78,49 +43,11 @@
       "selected": "已選擇 {{count}} 項",
       "selectAll": "選擇所有列",
       "selectRow": "選擇此列"
-    },
-    "filters": {
-      "start": "開始時間",
-      "end": "結束時間",
-      "apply": "套用",
-      "reset": "重設",
-      "invalidRange": "開始時間必須早於結束時間。"
-    },
-    "documentation": "文件",
-    "buildIdentity": "v{{version}} · {{channel}} · {{hash}} · {{kind}}"
-  },
-  "connectivity": {
-    "action": "測試連線",
-    "testing": "正在測試…",
-    "title": "連線結果",
-    "success": "上游出口可連線",
-    "successHint": "以下位址是上游實際看到的出口位址。",
-    "failed": "連線測試失敗",
-    "requestError": "無法執行連線測試。",
-    "route": "{{source}} · 總計 {{latency}} 毫秒",
-    "latency": "{{value}} 毫秒",
-    "sources": {
-      "proxy": "待測試代理",
-      "credential": "憑證代理",
-      "provider": "供應商代理",
-      "global": "全域代理",
-      "system": "系統代理",
-      "direct": "直接連線"
-    },
-    "errors": {
-      "invalid_fingerprint": "無法套用已設定的指紋。",
-      "transport": "無法連線上游或已設定的代理。",
-      "http_status": "連線服務傳回錯誤狀態。",
-      "invalid_response": "連線服務未傳回有效的出口位址。",
-      "timeout": "連線測試在 30 秒後逾時。",
-      "unknown": "連線測試因未知原因失敗。"
     }
   },
   "auth": {
-    "home": "返回首頁",
     "username": "使用者名稱",
     "password": "密碼",
-    "logout": "登出",
     "error": {
       "title": "身分驗證失敗",
       "description": "請檢查憑證後重試。"
@@ -134,27 +61,7 @@
       "title": "建立管理員",
       "description": "此帳戶用於管理執行個體，與資料平面 API 金鑰相互獨立。",
       "action": "建立管理員"
-    },
-    "session": {
-      "loadError": "無法驗證管理員工作階段，請重試。"
     }
-  },
-  "nav": {
-    "label": "控制台導覽",
-    "overview": "總覽",
-    "providers": "供應商",
-    "routes": "負載均衡",
-    "rules": "規則",
-    "identity": "身分",
-    "usage": "統計",
-    "pricing": "定價",
-    "tokenizers": "分詞器詞表",
-    "update": "更新",
-    "settings": "設定",
-    "open": "開啟導覽",
-    "close": "關閉導覽",
-    "resize": "調整導覽寬度",
-    "about": "關於"
   },
   "window": {
     "resets": "重設於 {{value}}",
@@ -177,32 +84,6 @@
     "coverage": {
       "partial": "部分涵蓋",
       "unknown": "涵蓋範圍未知"
-    },
-    "closeReason": {
-      "boundary_crossed": "跨越週期邊界",
-      "manual_reset": "手動重設",
-      "usage_decreased": "上游已用額度倒降"
-    },
-    "usageUnknown": "此週期的上游用量無法取得。"
-  },
-  "about": {
-    "title": "關於 GPROXY",
-    "subtitle": "用一個入口連接你的大型語言模型服務、上游帳戶與應用程式。",
-    "description": "GPROXY 是使用 Rust 建構的開源、自架大型語言模型 API 閘道，讓你的應用程式透過統一的 API 入口連接多個服務商。",
-    "version": "版本 {{version}}",
-    "features": {
-      "protocols": "相容 OpenAI Chat Completions、Responses、Claude Messages 和 Gemini API，支援串流回應與格式間直接轉換。",
-      "accounts": "統一管理上游憑證，支援權杖更新、負載平衡與故障切換。",
-      "control": "透過管理控制台和使用者 Portal 管理存取權限、配額、用量與費用。"
-    },
-    "openSource": "由 Leen Hawk 和社群共同維護。閘道採用 AGPL-3.0-or-later 授權條款，各元件的授權資訊請見原始碼儲存庫。",
-    "source": "原始碼儲存庫",
-    "feedback": "問題回報",
-    "sponsor": {
-      "title": "支持 GPROXY",
-      "description": "透過 GitHub Sponsors 贊助專案，支持 GPROXY 持續發展。",
-      "thanks": "你的支持將幫助專案持續維護、適配上游服務並開發新功能。感謝你使用和支持 GPROXY。",
-      "action": "贊助 LeenHawk"
     }
   }
 }

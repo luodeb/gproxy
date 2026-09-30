@@ -117,7 +117,7 @@ reloading their snapshot when the version changes.
   without `GPROXY_MASTER_KEY`.
 - PostgreSQL and MySQL: the database's own dump tools.
 - libSQL/Turso: the platform's snapshots.
-- Logical export: console → Settings → Configuration import and export
+- Logical export: configuration import and export
   (`POST /admin/api/export`, `POST /admin/api/import`). The export carries
   providers, credentials, keys, quotas, pricing, routes, aliases and rule
   sets. With `include_secrets` it also carries credential and key

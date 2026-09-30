@@ -101,7 +101,7 @@ schema 不声明数据库外键，因为四种后端对外键的支持并不一�
   存；没有 `GPROXY_MASTER_KEY`，密封的数据库无法读取。
 - PostgreSQL 和 MySQL：使用数据库自带的转储工具。
 - libSQL/Turso：使用平台的快照。
-- 逻辑导出：控制台 → 设置 → 配置导入与导出（`POST /admin/api/export`、
+- 逻辑导出：配置导入与导出（`POST /admin/api/export`、
   `POST /admin/api/import`）。导出包含 Provider、凭证、密钥、配额、定价、路
   由、别名和规则集。开启 `include_secrets` 时还包含凭证和密钥的秘密，以导
   出实例的密钥密封；导入用源主密钥打开它们并用本地密钥重新密封。用量、日

@@ -8,7 +8,7 @@ flags, environment variables, and `.env` files. There is no other
 configuration file: v3 does not read TOML. Everything that changes while
 the process runs — providers, credentials, routes, rules, pricing,
 identity, and the instance settings at the end of this page — lives in the
-database and is edited through the console or the admin API.
+database and is edited through the admin API.
 
 `gproxy --help` is generated from the same declaration as the environment
 list, so the two cannot drift. Every flag has a `GPROXY_*` twin; the tables
@@ -123,8 +123,8 @@ error.
 | `GPROXY_TRUSTED_PROXIES` | `--trusted-proxy <IP>` | empty | Comma-separated IPs. `X-Forwarded-For` (first entry) and `X-Real-IP` are honoured only from loopback or a listed peer. |
 | `GPROXY_CORS_ORIGINS` | `--cors-origin <ORIGIN>` | empty | Comma-separated exact origins. Empty sends no CORS headers (same-origin only). Allowed methods `GET, POST, PATCH, DELETE, OPTIONS`; headers `authorization, content-type, x-api-key`; credentials allowed. |
 | `GPROXY_MAX_ATTEMPTS` | `--max-attempts <COUNT>` | `6` | Upper bound on upstream attempts per request. A route's own `max_attempts` is capped by it. Must be positive. |
-| `GPROXY_MAX_IN_FLIGHT` | `--max-in-flight <COUNT>` | `1024` | Concurrent requests the listener serves. Every request, including the console and admin API, takes one permit; further requests wait. Must be positive. |
-| `GPROXY_FILE_UPLOAD_MAX_IN_FLIGHT` | `--file-upload-max-in-flight <COUNT>` | unset | Concurrent `POST /v1/files` and `POST /upload/v1beta/files` uploads per process. `0` is unlimited. When set it overrides the console setting of the same name. |
+| `GPROXY_MAX_IN_FLIGHT` | `--max-in-flight <COUNT>` | `1024` | Concurrent requests the listener serves. Every request, including the portal and admin API, takes one permit; further requests wait. Must be positive. |
+| `GPROXY_FILE_UPLOAD_MAX_IN_FLIGHT` | `--file-upload-max-in-flight <COUNT>` | unset | Concurrent `POST /v1/files` and `POST /upload/v1beta/files` uploads per process. `0` is unlimited. When set it overrides the `file_upload_max_in_flight` instance setting. |
 | `GPROXY_INSTANCE_ID` | `--instance-id <ID>` | `0` | Leading component of native request ids (`<instance>-<boot prefix>-<sequence>`). Give each instance in a fleet a distinct value. |
 | `GPROXY_LOG_FORMAT` | `--log-format <FORMAT>` | `text` | `text` or `json` (newline-delimited). |
 | `RUST_LOG` | — | `info` | Standard `tracing` filter for the native log. Read from the process environment only. |
@@ -136,14 +136,14 @@ is configurable.
 ## First-Run Bootstrap
 
 These apply to a fresh store, one with no administrator yet. Without
-`GPROXY_ADMIN_PASSWORD`, the first visit to `/admin` shows the setup
-screen that creates the administrator.
+`GPROXY_ADMIN_PASSWORD`, create the administrator with
+`POST /admin/api/setup`.
 
 | Variable | Flag | Default | Meaning |
 | --- | --- | --- | --- |
 | `GPROXY_ADMIN_USER` | `--admin-user <USER>` | `admin` | Administrator username used by bootstrap. |
 | `GPROXY_ADMIN_PASSWORD` | `--admin-password <PASSWORD>` | unset | Fresh store: creates the administrator with this password and an API key. Existing store: resets the password of this user if it exists; other accounts are never touched. |
-| `GPROXY_BOOTSTRAP_ADMIN_API_KEY` | `--bootstrap-admin-api-key <KEY>` | generated | Fresh store only, and only with `GPROXY_ADMIN_PASSWORD`: the administrator's first API key. Otherwise a random key is generated. Either way the key is sealed like any other and shown only through the console's reveal action. A blank value is an error. |
+| `GPROXY_BOOTSTRAP_ADMIN_API_KEY` | `--bootstrap-admin-api-key <KEY>` | generated | Fresh store only, and only with `GPROXY_ADMIN_PASSWORD`: the administrator's first API key. Otherwise a random key is generated. Either way the key is sealed like any other and shown only through the user-key reveal route (`POST /admin/api/user-keys/<id>/reveal`). A blank value is an error. |
 | `GPROXY_BOOTSTRAP_CHANNELS` | `--bootstrap-channel <CHANNEL>` | empty | Comma-separated channel ids. Fresh store only, with `GPROXY_ADMIN_PASSWORD`: creates one enabled provider per channel, named after it, with the channel's default rule set. An unknown id is a startup error. |
 
 Setting a bootstrap key or channels on a fresh store without
@@ -157,9 +157,9 @@ from `.env` — and there are no flags for them.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `GPROXY_AUTOSTART` | `on` | First-run default of the per-user login entry (Linux `.desktop`, macOS LaunchAgent, Windows Run key). Read once, until `<data-dir>/.autostart-initialized` exists; afterwards the console's Login startup switch owns it. Accepts `on`/`off`, `true`/`false`, `1`/`0`, `yes`/`no`, `enable(d)`/`disable(d)`. The saved launch command repeats the current arguments and adds `--master-key` when `GPROXY_MASTER_KEY` was in the environment. |
+| `GPROXY_AUTOSTART` | `on` | First-run default of the per-user login entry (Linux `.desktop`, macOS LaunchAgent, Windows Run key). Read once, until `<data-dir>/.autostart-initialized` exists; afterwards the autostart API (`GET`/`PUT /admin/api/native/autostart`) owns it. Accepts `on`/`off`, `true`/`false`, `1`/`0`, `yes`/`no`, `enable(d)`/`disable(d)`. The saved launch command repeats the current arguments and adds `--master-key` when `GPROXY_MASTER_KEY` was in the environment. |
 | `GPROXY_UPDATE_CHANNEL_SERVE` | build channel | Update channel with the highest precedence: `releases` (also `release`, `stable`), `staging`, or `dev` (also `development`). |
-| `GPROXY_UPDATE_CHANNEL` | build channel | Same values; consulted when `GPROXY_UPDATE_CHANNEL_SERVE` is unset. Full precedence: `_SERVE`, then `GPROXY_UPDATE_CHANNEL`, then the console's update channel setting, then the build channel. An invalid name makes update requests fail with 400. |
+| `GPROXY_UPDATE_CHANNEL` | build channel | Same values; consulted when `GPROXY_UPDATE_CHANNEL_SERVE` is unset. Full precedence: `_SERVE`, then `GPROXY_UPDATE_CHANNEL`, then the `update_channel` instance setting, then the build channel. An invalid name makes update requests fail with 400. |
 | `GPROXY_UPDATE_SERVE` | GitHub release URLs | Manifest URL override for every channel. Defaults: `dev` and `staging` read `releases/download/<channel>/manifest.json`, `releases` reads `releases/latest/download/manifest.json`, all from the GPROXY repository. |
 | `GPROXY_UPDATE_RESTART` | `re-exec` | What happens after an applied update or rollback: `re-exec` (also `reexec`; execs the new binary with the same arguments on Unix, exit 42 elsewhere), `supervisor` (exit code 42 after 250 ms so a supervisor restarts it), or `none` (you restart). An invalid value disables self-update; its endpoints answer 503. |
 
@@ -198,11 +198,11 @@ apply. See [Edge Wasm](/deployment/edge/).
 
 ## Instance Settings
 
-Runtime settings live in the `settings` table and are edited at
-console → Settings (`GET`/`PATCH /admin/api/instance-settings` and
+Runtime settings live in the `settings` table and are edited through the
+admin API (`GET`/`PATCH /admin/api/instance-settings` and
 `/admin/api/log-settings`). They take effect without a restart.
 
-| Key | Console label | Default | Meaning |
+| Key | Label | Default | Meaning |
 | --- | --- | --- | --- |
 | `instance_name` | Instance name | `default` | Shown in logs and telemetry. |
 | `proxy` | Default upstream proxy | none | Used after credential and provider proxies; `GPROXY_UPSTREAM_PROXY_URL` overrides it. |
@@ -218,11 +218,11 @@ console → Settings (`GET`/`PATCH /admin/api/instance-settings` and
 | `enable_upstream_log`, `enable_upstream_log_body` | Upstream metadata / bodies | — | Record every upstream attempt, and optionally bodies. |
 | `disable_log_redaction` | Disable log redaction | off | Store captured headers and bodies in clear text. Redaction is on by default. |
 | `traffic_blacklist` | Global metadata blacklist | built-in list | Extra request header, response header and query names removed instance-wide, on top of the built-in list. |
-| `update_channel`, `enable_auto_update_check` | Update | build channel | Console preference for the update channel and the automatic check. |
+| `update_channel`, `enable_auto_update_check` | Update | build channel | Saved preference for the update channel and the automatic check. |
 
 The Hugging Face token is stored sealed in its own table
 (`tokenizer_auth`), not in `settings`. Login startup and the update
-actions on the same console page are served by the native host, not the
+actions are served by the native host, not the
 database.
 
 ## Shutdown

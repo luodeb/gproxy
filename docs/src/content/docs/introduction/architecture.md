@@ -23,7 +23,7 @@ protocol transforms, and the execution pipeline. Hosts adapt it to a runtime:
 
 | Host | Runtime | Notes |
 | --- | --- | --- |
-| `gproxy-host-axum` | Native binary (`gproxy`) | Tokio + axum listener, embedded console, announcements, autostart, self-update. |
+| `gproxy-host-axum` | Native binary (`gproxy`) | Tokio + axum listener, embedded user portal, announcements, autostart, self-update. |
 | `gproxy-host-edge` | Fetch-based platforms | Cloudflare Workers, Deno Deploy, Netlify Edge; compiled to `wasm32-unknown-unknown`. |
 | Your application | Direct embedding | Links `gproxy-core` (or `gproxy-app`) and calls the same execute surface. |
 
@@ -191,7 +191,7 @@ An operation is declared once. `OperationSpec` in `gproxy-protocol` states,
 per operation: its group, ingress path patterns per wire family, request
 target, body and stream expectations, billability and settle mode, affinity
 kind, and whether it is a WebSocket upgrade. Classification, channels,
-routing defaults, settlement, and the console's generated metadata all read
+routing defaults, settlement, and the generated admin metadata all read
 that one declaration. In v2 the same facts were scattered across more than
 ten match sites and five parallel billable-operation lists, and the fifth
 list was the one that got missed.
@@ -263,7 +263,7 @@ A channel declares, as data:
   lists, HTTP/2 settings, header order — as plain data. The transport holds
   exactly one generic translation and knows no channel names;
 - its **login modes** — authorization code with PKCE, device code, or cookie
-  exchange — which the console renders without channel-specific UI;
+  exchange — which the admin API exposes without channel-specific UI;
 - the **fields** its provider and credential forms need, with labels and
   help text, likewise rendered generically.
 
@@ -341,13 +341,14 @@ request, then rebuild their snapshot when the version changes.
 `gproxy-admin` holds the DTOs and a pure dispatch function. Every host calls
 the same dispatch for `/admin/api/**` and `/portal/api/**`; there is no
 framework-specific admin router. Admin DTOs derive their TypeScript
-definitions, regenerated as part of `cargo test`, and the console imports
-those generated files rather than declaring its own — a hand-written mirror
-of a Rust type is a bug even when it happens to match.
+definitions, regenerated as part of `cargo test`, and the web application
+imports those generated files rather than declaring its own — a hand-written
+mirror of a Rust type is a bug even when it happens to match.
 
-The same binary serves three surfaces from one React application: the public
-product page at `/`, the operator console at `/admin`, and the user portal at
-`/portal`. See [Console, Portal & Public Site](/guides/console/).
+The same binary serves one React application — the user portal at `/portal` —
+alongside the admin API at `/admin/api/**` and its in-process MCP server. See
+[Portal & Web Surface](/guides/console/) and
+[Admin API & MCP](/reference/admin-api/).
 
 ## What Each Host Adds
 

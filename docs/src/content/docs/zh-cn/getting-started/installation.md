@@ -3,7 +3,7 @@ title: 安装
 description: 安装各类 GPROXY 安装包，找到数据目录与日志，完成首次启动，更新、管理登录启动并卸载。
 ---
 
-GPROXY 是一个可执行文件 `gproxy`，内嵌控制台、门户和公开站点。[下载](/zh-cn/getting-started/downloads/)
+GPROXY 是一个可执行文件 `gproxy`，内嵌用户门户，并同时提供管理 API。[下载](/zh-cn/getting-started/downloads/)
 页上的每种安装包都包含这个可执行文件，区别只在启动方式和数据位置。
 
 ## 安装包
@@ -18,7 +18,7 @@ sudo apt install ./gproxy-linux-x86_64.deb
 项，以及 `/etc/xdg/autostart/gproxy.desktop`，让启动器在登录时运行。依赖
 `curl`、`xdg-utils` 和 `zenity`。启动器会创建
 `${XDG_DATA_HOME:-~/.local/share}/gproxy`，首次运行时在其中写入私有 `.env`；当
-`http://127.0.0.1:8787/admin` 无响应时从该目录启动 `gproxy`，然后打开控制台。如果
+`http://127.0.0.1:8787/portal` 无响应时从该目录启动 `gproxy`，然后打开门户。如果
 你自己在终端运行 `gproxy`，它会使用当前目录下的 `./data`——那是另一个实例、另一份
 数据。
 
@@ -27,7 +27,7 @@ sudo apt install ./gproxy-linux-x86_64.deb
 把 `GPROXY.app` 拖到 Applications 并打开。应用从
 `~/Library/Application Support/GPROXY` 运行服务，首次运行时在其中写入私有
 `.env`，注册 `~/Library/LaunchAgents/io.github.leenhawk.gproxy.plist` 以便登录时
-启动并保持存活，然后打开控制台。它没有 Dock 图标。应用包是 ad-hoc 签名，未经
+启动并保持存活，然后打开门户。它没有 Dock 图标。应用包是 ad-hoc 签名，未经
 公证，要求 macOS 11。
 
 ### Windows Microsoft Store（MSIX）
@@ -35,11 +35,11 @@ sudo apt install ./gproxy-linux-x86_64.deb
 商店上架正在准备中；公开商店页面可用前请使用便携 ZIP。历史版本仍保留 MSI。
 
 商店包要求 Windows 10 2004 或更高版本。开始菜单入口会打开首次设置、后台启动服务
-并打开 Console。程序文件由 Windows 管理，数据库、密钥和日志保存在包的
+并打开门户。程序文件由 Windows 管理，数据库、密钥和日志保存在包的
 `LocalState\GPROXY` 下。自动登录启动默认关闭，可通过 **Windows 设置 → 应用 → 启动**
 启用。
 
-更新由 Store 管理。Console 更新页会引导打开商店，商店版禁用直接替换 EXE 和回滚。
+更新由 Store 管理。商店安装版的直接替换 EXE 和回滚端点被禁用。
 从 MSI 迁移时，先导出配置（按需包含密钥），停止旧服务并关闭旧版自启动，再启动
 商店版并导入配置。不会自动搬移或删除旧的 `%LOCALAPPDATA%\GPROXY`；迁移前请备份
 数据库及其主密钥。
@@ -48,7 +48,7 @@ sudo apt install ./gproxy-linux-x86_64.deb
 
 包名为 `io.github.leenhawk.gproxy`，最低要求 Android 9（API 28）。允许安装未知来
 源应用，安装对应 ABI 的 APK 并打开 GPROXY。界面上有一个"Start automatically on
-app launch and device boot"开关（默认开启）、启动服务、打开控制台和停止的按钮，以
+app launch and device boot"开关（默认开启）、启动服务、打开门户和停止的按钮，以
 及日志视图。自动启动开启时，应用会请求忽略电池优化。服务把二进制复制到应用私有存
 储，写入私有 `.env`，监听 `127.0.0.1:8787`，运行期间显示常驻通知。
 
@@ -109,9 +109,9 @@ Edge Bundle 用各平台自己的工具部署，需要一个 libSQL 数据库。
 
 ## 首次启动
 
-打开 `http://127.0.0.1:8787/admin`。存储中还没有管理员时，控制台显示**创建管理
-员**；填写用户名和密码即完成登录。管理员是带管理标志的用户；同一账户用于登录控制
-台，它的 API 密钥就是普通的用户密钥。
+全新存储在 `GET /admin/api/session` 中报告 `setup_required: true`；用
+`POST /admin/api/setup` 传入用户名和密码即可创建第一个管理员并登录。管理员是带
+管理标志的用户；同一账户可以在 `/portal` 登录，它的 API 密钥就是普通的用户密钥。
 
 无人值守部署可以从环境变量创建管理员：
 
@@ -123,7 +123,7 @@ GPROXY_ADMIN_PASSWORD=<强密码>
 ```
 
 在全新存储上，这会创建管理员并为其签发一个 API 密钥（使用提供的值，或生成一个，
-之后可在身份页通过显示密钥操作读取），并为列出的每个通道 id 创建一个已启用的
+之后可用 `POST /admin/api/user-keys/<id>/reveal` 读取），并为列出的每个通道 id 创建一个已启用的
 Provider，名称与通道相同，带该通道的路由默认值和一个空的私有规则集，暂无凭证。引导密钥和通道需要
 `GPROXY_ADMIN_PASSWORD`，且一旦已有管理员就会被忽略。在已有数据的存储上，
 `GPROXY_ADMIN_PASSWORD` 会重置 `GPROXY_ADMIN_USER` 所指管理员的密码（该账户存在
@@ -131,16 +131,17 @@ Provider，名称与通道相同，带该通道的路由默认值和一个空的
 
 ## 更新
 
-原生安装在控制台的**更新**页更新。更新通道（**构建默认**、**Dev（alpha）**、
-**稳定版**、**预发布版**）和自动检查开关（默认关闭）是实例设置，所有管理员共
-享。**检查更新**获取该通道的清单，显示已安装与最新版本、解析出的通道、构建目标、
-重启模式和发布说明。
+原生安装通过 `/admin/api/native/update` 更新，或使用
+`gproxy --update`。更新通道和自动检查开关（默认关闭）是实例设置，所有管理员共
+享。检查会获取该通道的清单，显示已安装与最新版本、解析出的通道、构建目标、
+重启模式和发布说明。更新路由刻意不在 MCP 工具目录中，因此代理无法替换正在运行
+的二进制。
 
 **验证并应用**先下载清单，只有当 Ed25519 签名有效、通道匹配、清单中含有当前运行的
 目标三元组、且最低数据版本不高于此二进制的模式版本时才接受。随后下载压缩包，校验
 大小和 SHA-256，把可执行文件暂存到 `<数据目录>/.update/`，把正在运行的可执行文件
 复制为 `<exe>.prev`，再完成替换。**回滚**恢复 `<exe>.prev`。Android 上会暂存经过
-验证的 APK 并打开系统安装器；应用需要"安装未知应用"权限。
+验证的 APK 并打开系统安装器；应用需要“安装未知应用”权限。
 
 | 变量 | 作用 |
 | --- | --- |
@@ -154,13 +155,14 @@ Provider，名称与通道相同，带该通道的路由默认值和一个空的
 
 ## 登录时启动
 
-**设置 → 登录时启动**管理由二进制自身写入的按用户自动启动项。在某个数据目录首次
+自启动 API（`GET` 与 `PUT /admin/api/native/autostart`）管理由二进制自身写入的
+按用户自动启动项。在某个数据目录首次
 启动时会创建该项，除非设置了 `GPROXY_AUTOSTART=off`；决定记录在
 `.autostart-initialized` 中。Linux 需要桌面会话（`DISPLAY`、`WAYLAND_DISPLAY` 或
 `XDG_CURRENT_DESKTOP`），容器内跳过。
 
 商店安装版改用包 StartupTask，通过 Windows 设置 → 应用 → 启动启用或禁用；
-Console 不为该安装版写入 Run 启动项。
+GPROXY 不为该安装版写入 Run 启动项。
 
 | 平台 | 启动项 |
 | --- | --- |
@@ -169,7 +171,7 @@ Console 不为该安装版写入 Run 启动项。
 | Windows 便携版 / 历史 MSI | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`，值名 `GPROXY` |
 
 启动项记录可执行文件、启动时使用的参数、工作目录，以及在设置了 `GPROXY_MASTER_KEY`
-时复制进去的 `--master-key`，因此要按含密信息对待。关闭开关会删除启动项，但不会停
+时复制进去的 `--master-key`，因此要按含密信息对待。关闭自启动会删除启动项，但不会停
 止正在运行的服务。`.deb` 的自动启动文件、`.dmg` 的
 LaunchAgent 属于安装包的启动器，与此开关相互独立。
 
@@ -190,4 +192,4 @@ LaunchAgent 属于安装包的启动器，与此开关相互独立。
 
 - [快速开始](/zh-cn/getting-started/quick-start/)，配置第一条路由。
 - [配置](/zh-cn/reference/configuration/)，查阅全部参数和变量。
-- 把实例暴露到 localhost 之外前，阅读[控制台、门户与公开站点](/zh-cn/guides/console/)。
+- 把实例暴露到 localhost 之外前，阅读[门户与 Web 界面](/zh-cn/guides/console/)。

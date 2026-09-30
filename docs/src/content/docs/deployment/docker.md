@@ -37,9 +37,10 @@ docker run -d --name gproxy \
   ghcr.io/leenhawk/gproxy:v3.0.0
 ```
 
-Open `http://127.0.0.1:8787/admin`. A fresh store shows the setup form that
-creates the first administrator; afterwards the same address is the login
-page. To skip the form, pass the first-run variables:
+Open `http://127.0.0.1:8787/portal`. A fresh store reports
+`setup_required: true` from `GET /admin/api/session`; create the first
+administrator with `POST /admin/api/setup` and a username and password. To skip
+that call, pass the first-run variables:
 
 ```sh
 docker run -d --name gproxy \
@@ -51,7 +52,7 @@ docker run -d --name gproxy \
 ```
 
 On a fresh store this creates the administrator and a sealed admin API key
-that you reveal in the console. `GPROXY_BOOTSTRAP_ADMIN_API_KEY` supplies
+that you reveal with `POST /admin/api/user-keys/<id>/reveal`. `GPROXY_BOOTSTRAP_ADMIN_API_KEY` supplies
 that key yourself and `GPROXY_BOOTSTRAP_CHANNELS` creates one empty provider
 per channel id; both require `GPROXY_ADMIN_PASSWORD` on a fresh store. While
 `GPROXY_ADMIN_PASSWORD` stays set, the named administrator's password is
@@ -141,7 +142,7 @@ tell the gateway about the proxy:
 | Variable | Effect |
 | --- | --- |
 | `GPROXY_TRUSTED_PROXIES` | Comma-separated IP addresses (not CIDR ranges). When the TCP peer is loopback or one of these, the first `X-Forwarded-For` entry, or else `X-Real-IP`, becomes the client IP used for login throttling and audit. From any other peer the headers are ignored. |
-| `GPROXY_CORS_ORIGINS` | Exact browser origins allowed to call the API cross-site with credentials. Empty means same-origin only, which is enough when the console and portal are served by the gateway itself. |
+| `GPROXY_CORS_ORIGINS` | Exact browser origins allowed to call the API cross-site with credentials. Empty means same-origin only, which is enough when the portal is served by the gateway itself. |
 
 On a compose network give the proxy container a fixed address so it can be
 listed. Forward the `Upgrade` and `Connection` headers for WebSocket
@@ -225,9 +226,9 @@ docker buildx build \
 | `GPROXY_VERSION`, `GPROXY_REVISION` | unset | OCI image labels |
 | `CARGO_NET_OFFLINE` | `false` | Build from a warmed cargo cache |
 
-The build needs no prebuilt console; the first stage compiles it.
+The build needs no prebuilt web assets; the first stage compiles them.
 `docker buildx build -f deploy/container/Dockerfile --target console-dist --output type=local,dest=dist/console .`
-exports only the console bundle. The release workflow builds the console with
+exports only the portal bundle. The release workflow builds the console with
 pnpm and reuses native Linux binaries when packaging container images.
 
 ## Transfer an Image Offline
