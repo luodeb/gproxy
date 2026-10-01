@@ -138,12 +138,12 @@ pub(super) async fn create(
     let id = match entity {
         Entity::PriceRules => {
             let input = rule(util::parse(body)?)?;
-            super::control::validators::price_rule(state, input.provider_id).await?;
+            crate::control::validators::price_rule(state, input.provider_id).await?;
             state.store().insert_price_rule(&input).await?
         }
         Entity::PriceRates => {
             let input = rate(util::parse(body)?)?;
-            super::control::validators::price_rate(state, input.rule_id).await?;
+            crate::control::validators::price_rate(state, input.rule_id).await?;
             state.store().insert_price_rate(&input).await?
         }
         _ => return Err(AdminError::NotFound),
@@ -160,12 +160,12 @@ pub(super) async fn update(
     let applied = match entity {
         Entity::PriceRules => {
             let input = rule(util::parse(body)?)?;
-            super::control::validators::price_rule(state, input.provider_id).await?;
+            crate::control::validators::price_rule(state, input.provider_id).await?;
             state.store().update_price_rule(id, &input).await?
         }
         Entity::PriceRates => {
             let input = rate(util::parse(body)?)?;
-            super::control::validators::price_rate(state, input.rule_id).await?;
+            crate::control::validators::price_rate(state, input.rule_id).await?;
             state.store().update_price_rate(id, &input).await?
         }
         _ => return Err(AdminError::NotFound),

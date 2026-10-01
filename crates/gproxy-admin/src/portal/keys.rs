@@ -1,14 +1,14 @@
 use base64::Engine as _;
 use bytes::Bytes;
-use gproxy_store::records::{UserKeyInput, UserKeyUpdateInput};
+use gproxy_store::records::{PermissionInput, UserKeyInput, UserKeyUpdateInput};
 use http::request::Parts;
 use http::{Response, StatusCode};
 
 use super::PortalIdentity;
 use crate::auth::{now, verify_same_origin};
 use crate::dto::{
-    PortalKeyCreateRequest, UserKeyCreateResponse, UserKeyDto, UserKeyPrefix,
-    UserKeyRevealResponse, UserKeyUpdateRequest,
+    PortalKeyCreateRequest, PortalKeyModelsDto, PortalKeyModelsRequest, UserKeyCreateResponse,
+    UserKeyDto, UserKeyPrefix, UserKeyRevealResponse, UserKeyUpdateRequest,
 };
 use crate::{AdminError, State, response};
 
@@ -175,4 +175,103 @@ fn generate(prefix: &str) -> Result<String, AdminError> {
 
 fn parse<T: serde::de::DeserializeOwned>(body: &Bytes) -> Result<T, AdminError> {
     serde_json::from_slice(body).map_err(|error| AdminError::BadRequest(error.to_string()))
+}
+
+/// The models one key may reach, and the full catalogue to choose from.
+pub(super) async fn models(
+    state: &impl State,
+    identity: &PortalIdentity,
+    id: i64,
+) -> Result<Response<Bytes>, AdminError> {
+    ensure_key(state, identity, id).await?;
+    let snapshot = state.store().control_snapshot().await?;
+    response::json(
+        StatusCode::OK,
+        &PortalKeyModelsDto {
+            available: available(state, identity).await,
+            allowed: key_patterns(&snapshot, id),
+        },
+    )
+}
+
+/// Replace one key's model allow-list. An empty list clears the key's own rows,
+/// so it falls back to the account's access.
+pub(super) async fn set_models(
+    state: &impl State,
+    identity: &PortalIdentity,
+    parts: &Parts,
+    id: i64,
+    body: &Bytes,
+) -> Result<Response<Bytes>, AdminError> {
+    verify_same_origin(parts)?;
+    ensure_key(state, identity, id).await?;
+    let request: PortalKeyModelsRequest =
+        serde_json::from_slice(body).map_err(|error| AdminError::BadRequest(error.to_string()))?;
+    for permission in state
+        .store()
+        .control_snapshot()
+        .await?
+        .permissions
+        .iter()
+        .filter(|permission| permission.subject_kind == "user_key" && permission.subject_id == id)
+    {
+        state.store().delete_permission(permission.id).await?;
+    }
+    for model in request.models {
+        state
+            .store()
+            .insert_permission(&PermissionInput {
+                subject_kind: "user_key".into(),
+                subject_id: id,
+                provider_id: None,
+                operation_group: None,
+                model_pattern: Some(model),
+                allowed: true,
+            })
+            .await?;
+    }
+    state.reload().await?;
+    let snapshot = state.store().control_snapshot().await?;
+    response::json(
+        StatusCode::OK,
+        &PortalKeyModelsDto {
+            available: available(state, identity).await,
+            allowed: key_patterns(&snapshot, id),
+        },
+    )
+}
+
+async fn available(state: &impl State, identity: &PortalIdentity) -> Vec<String> {
+    state
+        .portal_models(identity)
+        .into_iter()
+        .map(|model| model.name)
+        .collect()
+}
+
+async fn ensure_key(
+    state: &impl State,
+    identity: &PortalIdentity,
+    id: i64,
+) -> Result<(), AdminError> {
+    let keys = state.store().control_snapshot().await?.user_keys;
+    if keys
+        .iter()
+        .any(|key| key.id == id && key.user_id == identity.user_id)
+    {
+        Ok(())
+    } else {
+        Err(AdminError::NotFound)
+    }
+}
+
+fn key_patterns(snapshot: &gproxy_store::records::ControlSnapshot, id: i64) -> Vec<String> {
+    snapshot
+        .permissions
+        .iter()
+        .filter(|permission| {
+            permission.subject_kind == "user_key" && permission.subject_id == id && permission.allowed
+        })
+        .filter_map(|permission| permission.model_pattern.clone())
+        .collect()
 }

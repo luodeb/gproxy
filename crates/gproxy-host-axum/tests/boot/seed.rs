@@ -56,6 +56,7 @@ pub(crate) async fn operational(
         gproxy_store::records::ExposedModelInput {
             name: "public-model".into(),
             route_id: route,
+            display_name: None,
             enabled: true,
         },
     ))

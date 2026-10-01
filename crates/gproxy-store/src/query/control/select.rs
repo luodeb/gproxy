@@ -93,7 +93,7 @@ pub(crate) fn select_aliases() -> Result<Statement, StoreError> {
 }
 
 pub(crate) fn select_exposed_models() -> Result<Statement, StoreError> {
-    select_all("exposed_models", &["id", "name", "route_id", "enabled"])
+    select_all("exposed_models", &["id", "name", "route_id", "display_name", "enabled"])
 }
 
 pub(crate) fn select_provider_models() -> Result<Statement, StoreError> {

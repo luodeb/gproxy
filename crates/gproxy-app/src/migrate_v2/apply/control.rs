@@ -106,6 +106,7 @@ pub(super) async fn base(
             Ok(ExposedModelInput {
                 name: value.value.name.clone(),
                 route_id: id(&context.routes, value.id)?,
+                display_name: None,
                 enabled: value.value.enabled,
             })
         })

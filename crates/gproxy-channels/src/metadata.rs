@@ -181,3 +181,12 @@ mod tests {
         );
     }
 }
+
+pub(crate) const REFRESH_TOKEN: &[ChannelField] = &[field("refresh_token", Secret, true, false)];
+pub(crate) const KYLINTRAE: &[ChannelField] = &[
+    field("base_url", Url, false, false),
+    field("app_id", Text, false, true),
+    field("ide_version", Text, false, true),
+    field("ide_version_code", Text, false, true),
+    field("ide_function", Text, false, true),
+];

@@ -50,4 +50,8 @@ for (const key of ["localStorage", "sessionStorage"] as const) {
   }
 }
 
+// i18n 在模块加载时一次性地读取默认语言；生产默认是中文。测试断言的是英文文案，
+// 这里在测试文件加载前预置英文，保证断言确定性。
+window.localStorage.setItem("gproxy-console-lang", "en")
+
 afterEach(cleanup)

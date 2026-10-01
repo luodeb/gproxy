@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from "react"
 
-export type PortalRoute = "overview" | "connect" | "usage" | "keys" | "sessions"
+export type PortalRoute = "overview" | "connect" | "usage" | "keys" | "sessions" | "providers" | "settings"
 export type PortalLocation = { route: PortalRoute; segments: Array<string> }
 
-const routes = new Set<PortalRoute>(["overview", "connect", "usage", "keys", "sessions"])
+const routes = new Set<PortalRoute>(["overview", "connect", "usage", "keys", "sessions", "providers", "settings"])
 const serverLocation: PortalLocation = { route: "overview", segments: [] }
 let cachedPath = ""
 let cachedLocation = serverLocation

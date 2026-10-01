@@ -7,7 +7,7 @@ use crate::handlers::util;
 use crate::route::Entity;
 use crate::{AdminError, State};
 
-pub(super) async fn create(
+pub(crate) async fn create(
     state: &impl State,
     entity: Entity,
     body: &Bytes,
@@ -85,7 +85,7 @@ pub(super) async fn create(
     util::created(state, id).await
 }
 
-pub(super) async fn update(
+pub(crate) async fn update(
     state: &impl State,
     entity: Entity,
     id: i64,
@@ -139,7 +139,7 @@ pub(super) async fn update(
     util::updated(state, applied).await
 }
 
-pub(super) async fn credential_health_reset(
+pub(crate) async fn credential_health_reset(
     state: &impl State,
     id: i64,
 ) -> Result<Response<Bytes>, AdminError> {

@@ -40,6 +40,7 @@ pub(in crate::host) async fn admit(
                 targets: vec![target.clone()],
                 budget: gproxy_core::control::FailoverBudget { max_attempts: 1 },
             },
+            state.exempt,
         )?;
         let mut charged = Vec::new();
         let extra =

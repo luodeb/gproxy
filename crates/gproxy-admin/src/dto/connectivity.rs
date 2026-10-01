@@ -62,6 +62,12 @@ pub struct ModelTestResponse {
     pub ok: bool,
     pub status: u16,
     pub latency_ms: u64,
+    /// Time to first streamed token (content or reasoning). `None` when the
+    /// upstream never streamed a token.
+    pub ttft_ms: Option<u64>,
+    pub output_tokens: u64,
+    /// Output tokens per second, measured from first token to stream end.
+    pub tokens_per_second: Option<f64>,
     /// Which key paid for it. A test that costs money says whose budget it came from.
     pub key_prefix: String,
     pub reply: Option<String>,

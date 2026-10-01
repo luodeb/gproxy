@@ -143,10 +143,11 @@ pub(crate) fn insert_alias(input: &AliasInput) -> Result<Statement, StoreError> 
 pub(crate) fn insert_exposed_model(input: &ExposedModelInput) -> Result<Statement, StoreError> {
     insert(
         "exposed_models",
-        &["name", "route_id", "enabled"],
+        &["name", "route_id", "display_name", "enabled"],
         vec![
             value(input.name.clone()),
             value(input.route_id),
+            value(input.display_name.clone()),
             value(input.enabled),
         ],
     )

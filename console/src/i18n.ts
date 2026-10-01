@@ -23,14 +23,14 @@ const combine = (...domains: Array<object>) => Object.assign({}, ...domains)
 function storedLanguage(): LangCode {
   try {
     const value = window.localStorage.getItem(STORAGE_KEY)
-    return value && langCodes.has(value as LangCode) ? (value as LangCode) : "en"
+    return value && langCodes.has(value as LangCode) ? (value as LangCode) : "zh-CN"
   } catch {
-    return "en"
+    return "zh-CN"
   }
 }
 
 void i18n.use(initReactI18next).init({
-  lng: typeof window === "undefined" ? "en" : storedLanguage(),
+  lng: typeof window === "undefined" ? "zh-CN" : storedLanguage(),
   fallbackLng: "en",
   resources: {
     en: { translation: combine(enCommon, enPortal) },

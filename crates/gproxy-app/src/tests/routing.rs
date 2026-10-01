@@ -86,6 +86,7 @@ async fn aggregated_provider_models_match_the_catalogue_and_provider_preprocessi
         gproxy_store::records::ExposedModelInput {
             name: "codex/gpt-5.6-sol".into(),
             route_id: route,
+            display_name: None,
             enabled: true,
         },
     ))
@@ -162,6 +163,7 @@ async fn aggregated_models_split_only_the_provider_and_exact_routes_win() {
             gproxy_store::records::ExposedModelInput {
                 name: name.into(),
                 route_id: route,
+                display_name: None,
                 enabled: true,
             },
         ))

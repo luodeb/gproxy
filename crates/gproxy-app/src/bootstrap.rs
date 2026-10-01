@@ -285,6 +285,7 @@ fn channels() -> Result<ChannelRegistry, gproxy_channel_api::registry::Duplicate
         Box::new(gproxy_channels::GrokBuildChannel) as Box<dyn Channel>,
         Box::new(gproxy_channels::KiroChannel) as Box<dyn Channel>,
         Box::new(gproxy_channels::KimiChannel) as Box<dyn Channel>,
+        Box::new(gproxy_channels::KylinTraeChannel) as Box<dyn Channel>,
         Box::new(gproxy_channels::NvidiaChannel) as Box<dyn Channel>,
         Box::new(gproxy_channels::OpenCodeChannel) as Box<dyn Channel>,
         Box::new(gproxy_channels::OpenRouterChannel) as Box<dyn Channel>,

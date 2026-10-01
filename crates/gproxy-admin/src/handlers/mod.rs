@@ -2,7 +2,6 @@ pub(crate) mod audit;
 mod batch;
 mod catalogue;
 mod connectivity;
-mod control;
 pub(crate) mod default_models;
 mod identity;
 mod instance_settings;
@@ -17,13 +16,14 @@ mod rules;
 mod tokenizer_auth;
 mod tokenizer_vocabs;
 mod transfer;
-mod util;
+pub(crate) mod util;
 
 use bytes::Bytes;
 use http::Response;
 use http::request::Parts;
 
 use crate::auth::AdminIdentity;
+use crate::control;
 use crate::route::{Entity, Route};
 use crate::{AdminError, State};
 

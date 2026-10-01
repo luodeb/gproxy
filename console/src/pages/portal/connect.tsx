@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next"
 import { portalModels } from "@/api/portal"
 import { QueryState } from "@/components/query-state"
 import { ConnectionGuide } from "@/components/portal/connection-guide"
-import { ModelCatalog } from "@/components/portal/model-catalog"
 
 export function PortalConnectPage() {
   const { t } = useTranslation()
@@ -21,7 +20,7 @@ export function PortalConnectPage() {
         <h1 className="text-2xl font-semibold tracking-tight">{t("portal.connect.title")}</h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">{t("portal.connect.description")}</p>
       </section>
-      <QueryState loading={models.isLoading} error={models.isError ? t("portal.models.loadError") : ""}>
+      <QueryState loading={models.isLoading} error={models.isError ? t("portal.connect.modelsLoadError") : ""}>
         <div className="mt-6 flex flex-col gap-6">
           <ConnectionGuide
             origin={window.location.origin}
@@ -30,7 +29,6 @@ export function PortalConnectPage() {
             selectedModel={selectedModel}
             onModelChange={setRequestedModel}
           />
-          <ModelCatalog models={list} />
         </div>
       </QueryState>
     </>

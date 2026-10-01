@@ -80,6 +80,7 @@ pub(super) async fn fixture() -> Fixture {
         gproxy_store::records::ExposedModelInput {
             name: "public-model".into(),
             route_id: route,
+            display_name: None,
             enabled: true,
         },
     ))

@@ -204,6 +204,7 @@ pub struct AliasRecord {
 pub struct ExposedModelInput {
     pub name: String,
     pub route_id: i64,
+    pub display_name: Option<String>,
     pub enabled: bool,
 }
 
@@ -212,6 +213,7 @@ pub struct ExposedModelRecord {
     pub id: i64,
     pub name: String,
     pub route_id: i64,
+    pub display_name: Option<String>,
     pub enabled: bool,
 }
 

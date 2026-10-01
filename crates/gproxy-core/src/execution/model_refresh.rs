@@ -42,6 +42,12 @@ pub(super) async fn run<H: Host>(
                     return None;
                 };
                 let channel = core.channels.get(&targets.first()?.provider.channel)?;
+                // A provider whose listing is switched off must not fan its
+                // catalogue out on a client's `/v1/models` — local-model channels
+                // included. An operator's explicit import still refreshes.
+                if !request.force_model_refresh && !targets.iter().any(auto_refresh) {
+                    return None;
+                }
                 if targets.iter().any(|target| {
                     super::local_models::route_is_local(channel, target, classified.key)
                 }) {

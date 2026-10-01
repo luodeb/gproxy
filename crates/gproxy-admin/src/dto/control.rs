@@ -168,6 +168,7 @@ pub struct ModelAliasDto {
     pub id: i64,
     pub name: String,
     pub route_id: i64,
+    pub display_name: Option<String>,
     pub enabled: bool,
 }
 
@@ -175,6 +176,7 @@ pub struct ModelAliasDto {
 pub struct ModelAliasWriteRequest {
     pub name: String,
     pub route_id: i64,
+    pub display_name: Option<String>,
     pub enabled: bool,
 }
 

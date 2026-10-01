@@ -8,6 +8,8 @@ pub(in crate::host) struct AdmissionState {
     #[serde(default)]
     pub model: Option<String>,
     pub(super) reservations: Vec<QuotaReservation>,
+    #[serde(default)]
+    pub exempt: bool,
 }
 
 #[derive(Serialize, Deserialize)]

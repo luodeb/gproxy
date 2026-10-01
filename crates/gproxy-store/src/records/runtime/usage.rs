@@ -78,6 +78,16 @@ pub struct UsageAggregateQuery {
     pub model: Option<String>,
 }
 
+/// A single caller's usage over time, optionally narrowed to one key or model.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UsageSeriesQuery {
+    pub from: i64,
+    pub to: i64,
+    pub user_id: Option<i64>,
+    pub user_key_id: Option<i64>,
+    pub model: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UsageAggregateRecord {
     pub group: String,

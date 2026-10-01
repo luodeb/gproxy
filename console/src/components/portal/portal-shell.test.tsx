@@ -33,7 +33,7 @@ function renderShell() {
 test("the portal sidebar lists the routed sections and shows the user at the bottom", () => {
   renderShell()
   const nav = screen.getByRole("navigation", { name: "Portal navigation" })
-  for (const label of ["Overview", "Connect", "Usage", "API keys", "Authorized sessions"]) {
+  for (const label of ["Overview", "Providers", "Connect", "Usage", "API keys", "Authorized sessions", "Settings"]) {
     expect(screen.getByRole("button", { name: label })).toBeInTheDocument()
   }
   expect(nav).toBeInTheDocument()
@@ -48,14 +48,12 @@ test("clicking a section navigates to its URL", async () => {
   expect(window.location.pathname).toBe("/portal/keys")
 })
 
-test("the user menu opens settings in a drawer with the password form", async () => {
+test("the user menu navigates to the settings page", async () => {
   const user = userEvent.setup()
   renderShell()
   await user.click(screen.getByRole("button", { name: "Account menu" }))
   await user.click(await screen.findByRole("menuitem", { name: "Settings" }))
-  expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument()
-  expect(screen.getByText("Change the password used to sign in to this portal.")).toBeInTheDocument()
-  expect(screen.getByPlaceholderText("Current password")).toBeInTheDocument()
+  expect(window.location.pathname).toBe("/portal/settings")
 })
 
 test("the sidebar keeps its own preferences, separate from the console's", async () => {

@@ -5,7 +5,7 @@ use gproxy_store::records::{MasterKeyFingerprint, StoredSecret};
 use http::{Response, StatusCode};
 
 use crate::dto::*;
-use crate::handlers::{control, default_models, identity, rules, util};
+use crate::handlers::{default_models, identity, rules, util};
 use crate::{AdminError, State, response};
 
 pub(super) async fn run(state: &impl State, body: &Bytes) -> Result<Response<Bytes>, AdminError> {
@@ -33,12 +33,12 @@ pub(super) async fn run(state: &impl State, body: &Bytes) -> Result<Response<Byt
         providers: snapshot
             .providers
             .iter()
-            .map(control::map::provider)
+            .map(crate::control::map::provider)
             .collect(),
         credentials: credentials
             .iter()
             .map(|value| ExportCredentialDto {
-                config: control::map::credential(value, &[]),
+                config: crate::control::map::credential(value, &[]),
                 secret: credential_secrets.get(&value.id).cloned().map(Into::into),
             })
             .collect(),
@@ -66,17 +66,17 @@ pub(super) async fn run(state: &impl State, body: &Bytes) -> Result<Response<Byt
             .filter(|rate| !embedded_prices.contains(&rate.rule_id))
             .map(price_rate)
             .collect(),
-        routes: snapshot.routes.iter().map(control::map::route).collect(),
+        routes: snapshot.routes.iter().map(crate::control::map::route).collect(),
         route_members: snapshot
             .route_members
             .iter()
-            .map(control::map::route_member)
+            .map(crate::control::map::route_member)
             .collect(),
-        aliases: snapshot.aliases.iter().map(control::map::alias).collect(),
+        aliases: snapshot.aliases.iter().map(crate::control::map::alias).collect(),
         model_aliases: snapshot
             .exposed_models
             .iter()
-            .map(control::map::model_alias)
+            .map(crate::control::map::model_alias)
             .collect(),
         routing_rules: snapshot
             .routing_rules

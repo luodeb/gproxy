@@ -44,7 +44,7 @@ pub(crate) async fn apply(state: &impl State, body: &Bytes) -> Result<Response<B
         ));
     }
     if let Some(provider_id) = request.provider_id {
-        super::super::control::validators::provider(state, provider_id).await?;
+        crate::control::validators::provider(state, provider_id).await?;
     }
     let selected = request.model_ids.iter().collect::<BTreeSet<_>>();
     if selected.len() != request.model_ids.len()

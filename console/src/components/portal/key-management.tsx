@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { createPortalKey, deletePortalKey, portalKeys, revealPortalKey } from "@/api/portal"
 import { KeySecretCell } from "@/components/keys/key-secret-cell"
+import { KeyModelsDialog } from "@/components/portal/key-models-dialog"
+import type { UserKeyDto } from "@/generated/UserKeyDto"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +17,7 @@ export function KeyManagement() {
   const [label, setLabel] = useState("")
   const [prefix, setPrefix] = useState<"sk" | "at">("sk")
   const [created, setCreated] = useState<string | null>(null)
+  const [modelsKey, setModelsKey] = useState<UserKeyDto | null>(null)
 
   const createKey = useMutation({
     mutationFn: () => createPortalKey({ prefix, label: label.trim() || null, expires_at: null }),
@@ -54,12 +57,16 @@ export function KeyManagement() {
           {(keys.data ?? []).map((key) => (
             <div key={key.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
               <div className="min-w-0"><p className="truncate text-sm font-medium">{key.label ?? t("portal.keys.unnamed")}</p><KeySecretCell record={key} reveal={() => revealPortalKey(key.id)} /></div>
-              <Button type="button" size="sm" variant="outline" disabled={removeKey.isPending} onClick={() => removeKey.mutate(key.id)}>{t("portal.keys.revoke")}</Button>
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => setModelsKey(key)}>{t("portal.keys.models")}</Button>
+                <Button type="button" size="sm" variant="outline" disabled={removeKey.isPending} onClick={() => removeKey.mutate(key.id)}>{t("portal.keys.revoke")}</Button>
+              </div>
             </div>
           ))}
           {!keys.isLoading && (keys.data?.length ?? 0) === 0 ? <p className="p-3 text-sm text-muted-foreground">{t("portal.keys.empty")}</p> : null}
         </div>
       </CardContent>
+      <KeyModelsDialog keyRecord={modelsKey} onClose={() => setModelsKey(null)} />
     </Card>
   )
 }

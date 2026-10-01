@@ -200,6 +200,10 @@ fn common<'a, T: PartialEq>(mut values: impl Iterator<Item = Option<&'a T>>) -> 
 
 /// The operator's rows as a client would see them: `provider/model`, disabled rows
 /// omitted. Discovery refreshes these; the operator's edits outlive the refresh.
+///
+/// A provider whose settings set `expose_provider_models` to `false` is skipped:
+/// its models stay in the catalogue for routing and source selection but are not
+/// advertised as `provider/model` names.
 pub(super) fn provider_catalogue(
     stored: &gproxy_store::records::ControlSnapshot,
 ) -> Result<Vec<gproxy_core::ExposedModel>, gproxy_store::StoreError> {
@@ -207,6 +211,13 @@ pub(super) fn provider_catalogue(
         .providers
         .iter()
         .filter(|provider| provider.enabled)
+        .filter(|provider| {
+            provider
+                .settings
+                .get("expose_provider_models")
+                .and_then(Value::as_bool)
+                != Some(false)
+        })
         .map(|provider| (provider.id, provider.name.as_str()))
         .collect::<BTreeMap<_, _>>();
     let mut catalogue = Vec::new();

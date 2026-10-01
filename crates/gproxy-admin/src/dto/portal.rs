@@ -36,6 +36,20 @@ pub struct PortalKeyCreateRequest {
     pub expires_at: Option<i64>,
 }
 
+/// Which models one API key may reach. Empty `allowed` means the key has no
+/// row of its own and inherits the account's access.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalKeyModelsDto {
+    pub available: Vec<String>,
+    pub allowed: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct PortalKeyModelsRequest {
+    pub models: Vec<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct PortalSettingsDto {
     pub recent_requests_enabled: bool,
@@ -54,6 +68,47 @@ pub struct PortalModelDto {
     pub capabilities: Vec<PortalModelCapabilityDto>,
 }
 
+/// A single upstream source backing an exposed model. The portal manages these
+/// without exposing the underlying route concept.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalModelSourceDto {
+    pub id: i64,
+    pub provider_id: i64,
+    pub upstream_model: String,
+    pub tier: u32,
+    pub weight: u32,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct PortalModelSourceWriteRequest {
+    pub provider_id: i64,
+    pub upstream_model: String,
+    pub tier: u32,
+    pub weight: u32,
+    pub enabled: bool,
+}
+
+/// An exposed model together with every source that serves it. The route that
+/// ties them together is an implementation detail the portal never sees.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalManagedModelDto {
+    pub id: i64,
+    pub name: String,
+    pub display_name: Option<String>,
+    pub enabled: bool,
+    pub sources: Vec<PortalModelSourceDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct PortalManagedModelWriteRequest {
+    pub name: String,
+    pub display_name: Option<String>,
+    pub enabled: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(deny_unknown_fields)]
 pub struct PortalUsageQueryDto {
@@ -70,6 +125,48 @@ pub struct PortalUsageDto {
     pub output_tokens: u64,
     pub cached_input_tokens: u64,
     pub cost: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct PortalUsageOverviewQueryDto {
+    pub from: i64,
+    pub to: i64,
+    pub user_key_id: Option<i64>,
+    pub model: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalUsagePointDto {
+    pub bucket_start: i64,
+    pub requests: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub cached_input_tokens: u64,
+    pub cost: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalUsageModelDto {
+    pub model: String,
+    pub requests: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub cached_input_tokens: u64,
+    pub cost: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalUsageOverviewDto {
+    pub from: i64,
+    pub to: i64,
+    pub requests: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub cached_input_tokens: u64,
+    pub cost: String,
+    pub series: Vec<PortalUsagePointDto>,
+    pub models: Vec<PortalUsageModelDto>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

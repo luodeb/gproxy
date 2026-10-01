@@ -1,6 +1,7 @@
 //! Framework-free control-plane dispatch shared by every gproxy host.
 
 mod auth;
+mod control;
 mod credential_label;
 mod defaults;
 mod dispatch;

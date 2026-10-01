@@ -95,6 +95,7 @@ async fn run_inner(store: &Store) -> Result<Outcome, StoreError> {
         .insert_exposed_model(&ExposedModelInput {
             name: "public-model".into(),
             route_id: route,
+            display_name: None,
             enabled: true,
         })
         .await?;
@@ -328,6 +329,7 @@ async fn delete_route_takes_its_rows(store: &Store, provider: i64) -> Result<(),
         .insert_exposed_model(&ExposedModelInput {
             name: "doomed-model".into(),
             route_id: route,
+            display_name: None,
             enabled: true,
         })
         .await?;
@@ -348,6 +350,7 @@ async fn delete_route_takes_its_rows(store: &Store, provider: i64) -> Result<(),
         .insert_exposed_model(&ExposedModelInput {
             name: "doomed-model".into(),
             route_id: replacement,
+            display_name: None,
             enabled: true,
         })
         .await?;

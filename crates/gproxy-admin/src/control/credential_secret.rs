@@ -2,7 +2,7 @@ use crate::{AdminError, State, dto::CredentialWriteRequest};
 use gproxy_store::records::CredentialUpdateInput;
 use serde_json::{Map, Value};
 
-pub(super) async fn create(
+pub(crate) async fn create(
     state: &impl State,
     request: &CredentialWriteRequest,
 ) -> Result<Value, AdminError> {
@@ -13,7 +13,7 @@ pub(super) async fn create(
     merge(state, request, primary, None, false).await
 }
 
-pub(super) async fn update(
+pub(crate) async fn update(
     state: &impl State,
     id: i64,
     request: &CredentialWriteRequest,

@@ -8,7 +8,7 @@ use crate::dto::{
 };
 use crate::{AdminError, State};
 
-pub(super) fn provider(
+pub(crate) fn provider(
     state: &impl State,
     request: ProviderWriteRequest,
 ) -> Result<ProviderInput, AdminError> {
@@ -59,7 +59,7 @@ pub(super) fn provider(
     })
 }
 
-pub(super) fn route(request: RouteWriteRequest) -> Result<RouteInput, AdminError> {
+pub(crate) fn route(request: RouteWriteRequest) -> Result<RouteInput, AdminError> {
     if request.name.trim().is_empty() || request.max_attempts == 0 {
         return Err(AdminError::BadRequest(
             "route name must not be blank and max_attempts must be positive".into(),
@@ -73,7 +73,7 @@ pub(super) fn route(request: RouteWriteRequest) -> Result<RouteInput, AdminError
     })
 }
 
-pub(super) fn route_member(
+pub(crate) fn route_member(
     request: RouteMemberWriteRequest,
 ) -> Result<RouteMemberInput, AdminError> {
     if request.upstream_model.trim().is_empty() {
@@ -96,7 +96,7 @@ pub(super) fn route_member(
     })
 }
 
-pub(super) fn alias(request: AliasWriteRequest) -> Result<AliasInput, AdminError> {
+pub(crate) fn alias(request: AliasWriteRequest) -> Result<AliasInput, AdminError> {
     if request.alias.trim().is_empty() || request.target.trim().is_empty() {
         return Err(AdminError::BadRequest(
             "alias and target must not be blank".into(),
@@ -111,7 +111,7 @@ pub(super) fn alias(request: AliasWriteRequest) -> Result<AliasInput, AdminError
     })
 }
 
-pub(super) fn model_alias(
+pub(crate) fn model_alias(
     request: ModelAliasWriteRequest,
 ) -> Result<ExposedModelInput, AdminError> {
     if request.name.trim().is_empty() {
@@ -122,11 +122,15 @@ pub(super) fn model_alias(
     Ok(ExposedModelInput {
         name: request.name,
         route_id: request.route_id,
+        display_name: request
+            .display_name
+            .map(|value| value.trim().to_owned())
+            .filter(|value| !value.is_empty()),
         enabled: request.enabled,
     })
 }
 
-pub(super) fn provider_model(
+pub(crate) fn provider_model(
     request: ProviderModelWriteRequest,
 ) -> Result<ProviderModelInput, AdminError> {
     if request.model_id.trim().is_empty() {

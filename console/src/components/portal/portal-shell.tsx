@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from "react"
+import { type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 import {
+  BoxesIcon,
   CableIcon,
   ChartNoAxesCombinedIcon,
   ChevronsUpDownIcon,
@@ -22,9 +23,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { LocaleControls } from "@/components/locale-controls"
-import { PasswordForm } from "@/components/portal/password-form"
 import { usePortalSession } from "@/lib/portal-session-context"
 import { SidebarResizeHandle } from "@/components/sidebar-resize-handle"
 import { useSidebarPreferences } from "@/components/use-sidebar-preferences"
@@ -35,17 +33,18 @@ const PORTAL_SIDEBAR_KEY = "gproxy.portal.sidebar.preferences"
 
 const items: Array<{ route: PortalRoute; icon: typeof LayoutDashboardIcon }> = [
   { route: "overview", icon: LayoutDashboardIcon },
+  { route: "providers", icon: BoxesIcon },
   { route: "connect", icon: CableIcon },
   { route: "usage", icon: ChartNoAxesCombinedIcon },
   { route: "keys", icon: KeyRoundIcon },
   { route: "sessions", icon: ShieldCheckIcon },
+  { route: "settings", icon: SettingsIcon },
 ]
 
 export function PortalShell({ route, children }: { route: PortalRoute; children: ReactNode }) {
   const { t } = useTranslation()
   const { context, logout } = usePortalSession()
   const sidebar = useSidebarPreferences(PORTAL_SIDEBAR_KEY)
-  const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
     <div className="min-h-screen lg:grid" style={{ gridTemplateColumns: `${sidebar.collapsed ? 64 : sidebar.width}px minmax(0, 1fr)` }}>
@@ -70,28 +69,11 @@ export function PortalShell({ route, children }: { route: PortalRoute; children:
               </Button>
             ))}
           </nav>
-          <UserMenu collapsed={sidebar.collapsed} username={context.user_name} onLogout={logout} onSettings={() => setSettingsOpen(true)} />
+          <UserMenu collapsed={sidebar.collapsed} username={context.user_name} onLogout={logout} onSettings={() => navigatePortalPath(portalPath("settings"))} />
         </div>
         {!sidebar.collapsed ? <SidebarResizeHandle label={t("portal.nav.resize")} width={sidebar.width} minWidth={sidebar.minWidth} maxWidth={sidebar.maxWidth} onWidth={sidebar.setWidth} onReset={sidebar.resetWidth} /> : null}
       </aside>
       <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
-      <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <SheetContent className="w-full gap-6 overflow-y-auto sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>{t("portal.settings.title")}</SheetTitle>
-            <SheetDescription>{t("portal.settings.description")}</SheetDescription>
-          </SheetHeader>
-          <p className="text-sm text-muted-foreground">{t("portal.settings.account", { name: context.user_name })}</p>
-          <div className="flex flex-col gap-3">
-            <div>
-              <p className="text-sm font-medium">{t("portal.settings.appearance")}</p>
-              <p className="text-xs text-muted-foreground">{t("portal.settings.appearanceDescription")}</p>
-            </div>
-            <LocaleControls />
-          </div>
-          <PasswordForm />
-        </SheetContent>
-      </Sheet>
     </div>
   )
 }

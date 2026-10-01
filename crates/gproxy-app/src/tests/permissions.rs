@@ -372,6 +372,7 @@ async fn model_grants_filter_lists_calls_and_retries_with_deny_precedence() {
         gproxy_store::records::ExposedModelInput {
             name: "private-model".into(),
             route_id: fixture.route,
+            display_name: None,
             enabled: true,
         },
     ))

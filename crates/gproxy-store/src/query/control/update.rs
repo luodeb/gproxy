@@ -168,10 +168,11 @@ pub(crate) fn update_exposed_model(
     update(
         "exposed_models",
         id,
-        &["name", "route_id", "enabled"],
+        &["name", "route_id", "display_name", "enabled"],
         vec![
             value(input.name.clone()),
             value(input.route_id),
+            value(input.display_name.clone()),
             value(input.enabled),
         ],
     )

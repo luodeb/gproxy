@@ -47,7 +47,13 @@
     "brand": "GPROXY",
     "surface": "User portal",
     "common": {
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "cancel": "Cancel",
+      "save": "Save",
+      "delete": "Delete",
+      "saved": "Saved.",
+      "deleted": "Deleted.",
+      "close": "Close"
     },
     "account": {
       "logout": "Sign out",
@@ -74,7 +80,12 @@
       "copied": "Full key copied.",
       "copyError": "Could not copy the key. Select it and copy manually.",
       "remask": "Mask key",
-      "masked": "{{prefix}}••••••••••••"
+      "masked": "{{prefix}}••••••••••••",
+      "models": "Model access",
+      "modelsTitle": "Model access",
+      "modelsHint": "Only the checked models this key may call. None = inherit account.",
+      "modelsError": "Could not load models.",
+      "modelsEmpty": "No models available."
     },
     "password": {
       "title": "Password",
@@ -108,37 +119,12 @@
         "gemini": "Gemini Python",
         "codex": "Codex CLI",
         "claudeCode": "Claude Code"
-      }
+      },
+      "modelsLoadError": "Could not load models. Retry."
     },
     "models": {
-      "title": "Allowed models",
-      "description": "Live routes and capabilities available to your account.",
-      "model": "Model",
-      "capabilities": "Capabilities",
       "empty": "No models are available",
-      "emptyDescription": "Ask the operator to expose a route and grant your account access.",
-      "loadError": "Could not load allowed models. Retry."
-    },
-    "quota": {
-      "title": "Quota windows",
-      "description": "The spending windows currently applied to your account.",
-      "loadError": "Could not load quota windows. Retry.",
-      "empty": "No spending quota is assigned",
-      "emptyDescription": "Your account currently has no configured cost window.",
-      "windowLabel": "{{scope}} · {{window}}",
-      "scopes": {
-        "user": "User",
-        "organization": "Organization",
-        "team": "Team"
-      },
-      "kinds": {
-        "total": "Total",
-        "daily": "Daily",
-        "weekly": "Weekly",
-        "monthly": "Monthly",
-        "5h": "5 hours",
-        "7d": "7 days"
-      }
+      "emptyDescription": "Ask the operator to expose a route and grant your account access."
     },
     "usage": {
       "title": "Usage and cost",
@@ -154,7 +140,16 @@
       "requests": "Requests",
       "inputTokens": "Input tokens",
       "outputTokens": "Output tokens",
-      "cachedTokens": "Cached input tokens"
+      "cachedTokens": "Cached input tokens",
+      "keyLabel": "API key",
+      "allKeys": "All keys",
+      "trend": "Call volume",
+      "trendDescription": "Requests per hour in the selected range.",
+      "metricLabel": "Metric",
+      "tokens": "Tokens",
+      "noData": "No usage in this range.",
+      "byModel": "Per-model usage",
+      "byModelDescription": "Requests, tokens and cost by upstream model."
     },
     "recent": {
       "title": "Recent settled requests",
@@ -184,18 +179,110 @@
       "connect": "Connect",
       "usage": "Usage",
       "keys": "API keys",
-      "sessions": "Authorized sessions"
+      "sessions": "Authorized sessions",
+      "providers": "Providers",
+      "settings": "Settings"
     },
     "settings": {
       "title": "Settings",
       "description": "Manage the password you sign in with and your display preferences.",
       "appearance": "Appearance and language",
       "appearanceDescription": "Theme and language apply to this browser only.",
-      "account": "Signed in as {{name}}"
+      "account": "Signed in as {{name}}",
+      "accountTitle": "Account"
     },
     "sessions": {
       "title": "Authorized sessions",
       "description": "Applications you have signed in to with OAuth. Revoke one to cut off its access and refresh tokens."
+    },
+    "providers": {
+      "pageTitle": "Providers & Models",
+      "pageDescription": "Manage upstream providers, their API keys, and the models exposed to clients.",
+      "tabProviders": "Providers",
+      "tabModels": "Models",
+      "loadError": "Could not load management data. Retry.",
+      "addProvider": "Add provider",
+      "addModel": "Add model",
+      "addKey": "Add key",
+      "keys": "API keys",
+      "models": "Models",
+      "addUpstreamModel": "Add upstream model",
+      "noKeys": "No API keys yet",
+      "noUpstreamModels": "No upstream models",
+      "unnamedKey": "Unnamed key",
+      "sources": "Sources",
+      "addSource": "Add source",
+      "noSources": "No sources yet",
+      "tier": "Tier",
+      "weight": "Weight",
+      "enabled": "Enabled",
+      "editProvider": "Edit provider",
+      "name": "Name",
+      "label": "Label",
+      "channel": "Channel",
+      "proxyUrl": "Proxy URL",
+      "strategy": "Key strategy",
+      "roundRobin": "Round-robin",
+      "sticky": "Sticky",
+      "editKey": "Edit key",
+      "keyKind": "Key kind",
+      "rpm": "RPM limit",
+      "tpm": "TPM limit",
+      "editUpstreamModel": "Edit upstream model",
+      "modelId": "Model ID",
+      "displayName": "Display name",
+      "provider": "Provider",
+      "editModel": "Edit model",
+      "modelHint": "The model ID is what clients call via the API; the display name is shown here.",
+      "editSource": "Edit source",
+      "upstreamModel": "Upstream model",
+      "advanced": "Advanced fields",
+      "contextWindow": "Context window",
+      "maxOutput": "Max output tokens",
+      "deleteProvider": "Delete provider",
+      "deleteProviderBody": "Delete {{name}}? Its keys and any model sources that reference it will be removed.",
+      "deleteKey": "Delete key",
+      "deleteKeyBody": "This key stops working immediately.",
+      "deleteUpstreamModel": "Delete upstream model",
+      "deleteModel": "Delete model",
+      "deleteModelBody": "Delete {{name}} and all of its sources?",
+      "deleteSource": "Delete source",
+      "reveal": "Reveal key",
+      "resetHealth": "Reset health",
+      "search": "Search providers and models",
+      "secretHint": "Leave the fields blank to keep the current secret.",
+      "emptyProviders": "No providers yet.",
+      "emptyModels": "No models yet.",
+      "keyCount": "{{count}} keys",
+      "discover": "Discover models",
+      "discoverTitle": "Discovered upstream models",
+      "discoverError": "Could not reach the provider. Check its key and URL.",
+      "discoverEmpty": "The provider returned no models.",
+      "discoverKnown": "Added",
+      "discoverAdd": "Add {{count}}",
+      "activeSourceCount": "{{count}} active",
+      "noActiveSource": "No active source",
+      "modelSource": "Source (optional)",
+      "modelSourceHint": "Pick an existing upstream model",
+      "weightHint": "Share of traffic when the provider has several keys (higher = more requests).",
+      "rpmHint": "Max requests per minute for this key. Leave blank for no limit.",
+      "tpmHint": "Max tokens per minute for this key. Leave blank for no limit.",
+      "test": "Test speed",
+      "testTitle": "Model speed test",
+      "testError": "Test failed.",
+      "ttft": "TTFT",
+      "tokensPerSecond": "Output speed",
+      "totalLatency": "Total latency",
+      "outputTokens": "Output tokens",
+      "testRunning": "Testing… this takes a few seconds.",
+      "exposeModels": "Expose"
+    },
+    "health": {
+      "healthy": "Healthy",
+      "degraded": "Degraded",
+      "dead": "Dead",
+      "disabled": "Disabled",
+      "unknown": "Unknown"
     }
   }
 }

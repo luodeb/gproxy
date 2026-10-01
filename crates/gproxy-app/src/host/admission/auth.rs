@@ -50,7 +50,13 @@ pub(crate) fn authorize(
     operation: Option<OperationKey>,
     model: Option<&str>,
     plan: &Plan,
+    exempt: bool,
 ) -> Result<Plan, CoreError> {
+    // Operator-initiated calls (model discovery and the speed test) run with a
+    // real key but must not be narrowed by that key's model allow-list.
+    if exempt {
+        return Ok(plan.clone());
+    }
     let mut plan = plan.clone();
     plan.targets.retain(|target| {
         provider_permitted(snapshot, identity, operation, target.provider.id, model)
@@ -130,8 +136,16 @@ fn group_permitted(
             .name;
         model.strip_prefix(name)?.strip_prefix('/')
     });
+    // API keys are allow-lists: a key with no `user_key` rows of its own reaches
+    // nothing, and broader subjects never widen a key's access.
+    let key_based = identity.user_key_id > 0;
     let applicable = snapshot.permissions.iter().filter(|permission| {
-        subject_matches(&permission.subject_kind, permission.subject_id, identity)
+        let subject_ok = if key_based {
+            permission.subject_kind == "user_key" && permission.subject_id == identity.user_key_id
+        } else {
+            subject_matches(&permission.subject_kind, permission.subject_id, identity)
+        };
+        subject_ok
             && permission.provider_id.is_none_or(|id| id == provider)
             && permission
                 .operation_group

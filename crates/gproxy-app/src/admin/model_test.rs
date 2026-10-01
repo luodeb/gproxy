@@ -1,4 +1,5 @@
 use bytes::Bytes;
+use futures_util::StreamExt;
 use gproxy_admin::AdminError;
 use gproxy_admin::dto::{ModelTestRequest, ModelTestResponse};
 use http::{HeaderMap, HeaderValue, Method};
@@ -39,8 +40,9 @@ pub(super) async fn run(
     );
     let body = json!({
         "model": request.model_id,
-        "max_tokens": 16,
-        "messages": [{ "role": "user", "content": "hello" }],
+        "max_tokens": 64,
+        "stream": true,
+        "messages": [{ "role": "user", "content": "hi" }],
     });
     let ctx = gproxy_core::RequestCtx {
         request_id: format!("model-test:{}:{}", request.provider_id, request.model_id),
@@ -53,7 +55,7 @@ pub(super) async fn run(
         headers,
         body: Bytes::from(serde_json::to_vec(&body).expect("static json")),
         upgrade: false,
-        force_model_refresh: false,
+        force_model_refresh: true,
         mode: gproxy_core::RoutingMode::Scoped {
             provider: provider.name.clone(),
         },
@@ -61,38 +63,155 @@ pub(super) async fn run(
 
     let started = Instant::now();
     let outcome = app.execute(ctx).await;
-    let latency_ms = started.elapsed().as_millis().try_into().unwrap_or(u64::MAX);
+    let mut ttft: Option<u64> = None;
+    let mut content = String::new();
+    let mut output_tokens: u64 = 0;
+    let mut error_message: Option<String> = None;
+    let (status, mut ok);
 
     match outcome {
         Ok(outcome) => {
-            let status = outcome.status.as_u16();
-            let ok = outcome.status.is_success();
-            let body = match outcome.body {
-                gproxy_core::ResponseBody::Full(bytes) => Some(bytes),
-                _ => None,
-            };
-            Ok(ModelTestResponse {
-                ok,
-                status,
-                latency_ms,
-                key_prefix,
-                reply: ok.then(|| body.as_deref().and_then(first_text)).flatten(),
-                // What the upstream said about the refusal is the answer the operator
-                // came for, so it is carried through rather than reduced to a status.
-                message: (!ok)
-                    .then(|| body.as_deref().and_then(upstream_error))
-                    .flatten(),
-            })
+            status = outcome.status.as_u16();
+            ok = outcome.status.is_success();
+            match outcome.body {
+                gproxy_core::ResponseBody::Full(bytes) => {
+                    if ok {
+                        content = first_text(&bytes).unwrap_or_default();
+                        output_tokens = output_tokens_of(&bytes).unwrap_or(0);
+                    } else {
+                        error_message = upstream_error(&bytes);
+                    }
+                }
+                gproxy_core::ResponseBody::Stream(mut stream) => {
+                    while let Some(chunk) = stream.next().await {
+                        match chunk {
+                            Ok(bytes) => {
+                                let elapsed = elapsed_ms(started);
+                                let sample = scan(&String::from_utf8_lossy(&bytes));
+                                if ttft.is_none() && sample.first_token {
+                                    ttft = Some(elapsed);
+                                }
+                                content.push_str(&sample.content);
+                                if let Some(tokens) = sample.output_tokens {
+                                    output_tokens = tokens;
+                                }
+                                if sample.error.is_some() {
+                                    error_message = sample.error;
+                                }
+                            }
+                            Err(error) => {
+                                ok = false;
+                                error_message = Some(error.to_string());
+                                break;
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
         }
-        Err(error) => Ok(ModelTestResponse {
-            ok: false,
-            status: 0,
-            latency_ms,
-            key_prefix,
-            reply: None,
-            message: Some(error.to_string()),
-        }),
+        Err(error) => {
+            status = 0;
+            ok = false;
+            error_message = Some(error.to_string());
+        }
     }
+
+    let latency_ms = elapsed_ms(started);
+    if error_message.is_some() {
+        ok = false;
+    }
+    let tokens_per_second = ttft.and_then(|first| {
+        let span = latency_ms.saturating_sub(first);
+        (span > 0 && output_tokens > 0).then(|| output_tokens as f64 * 1_000.0 / span as f64)
+    });
+
+    Ok(ModelTestResponse {
+        ok,
+        status,
+        latency_ms,
+        ttft_ms: ttft,
+        output_tokens,
+        tokens_per_second,
+        key_prefix,
+        reply: ok
+            .then(|| content.trim().to_owned())
+            .filter(|value| !value.is_empty()),
+        message: error_message,
+    })
+}
+
+fn elapsed_ms(started: Instant) -> u64 {
+    started.elapsed().as_millis().try_into().unwrap_or(u64::MAX)
+}
+
+#[derive(Default)]
+struct Scan {
+    first_token: bool,
+    content: String,
+    output_tokens: Option<u64>,
+    error: Option<String>,
+}
+
+/// Read one upstream chunk's SSE `data:` frames for the first-token signal,
+/// streamed text, the final usage, and any upstream error.
+fn scan(text: &str) -> Scan {
+    let mut out = Scan::default();
+    for line in text.lines() {
+        let Some(data) = line.strip_prefix("data:") else {
+            continue;
+        };
+        let data = data.trim();
+        if data.is_empty() || data == "[DONE]" {
+            continue;
+        }
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(data) else {
+            continue;
+        };
+        if let Some(message) = value
+            .get("error")
+            .and_then(|error| error.get("message"))
+            .and_then(serde_json::Value::as_str)
+        {
+            out.error = Some(message.to_owned());
+        }
+        if let Some(tokens) = value
+            .get("usage")
+            .and_then(|usage| usage.get("completion_tokens"))
+            .and_then(serde_json::Value::as_u64)
+        {
+            out.output_tokens = Some(tokens);
+        }
+        let delta = value
+            .get("choices")
+            .and_then(serde_json::Value::as_array)
+            .and_then(|choices| choices.first())
+            .and_then(|choice| choice.get("delta"));
+        if let Some(delta) = delta {
+            if let Some(text) = delta.get("content").and_then(serde_json::Value::as_str) {
+                if !text.is_empty() {
+                    out.first_token = true;
+                    out.content.push_str(text);
+                }
+            }
+            if delta
+                .get("reasoning_content")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|text| !text.is_empty())
+            {
+                out.first_token = true;
+            }
+        }
+    }
+    out
+}
+
+fn output_tokens_of(body: &[u8]) -> Option<u64> {
+    serde_json::from_slice::<serde_json::Value>(body)
+        .ok()?
+        .get("usage")?
+        .get("completion_tokens")?
+        .as_u64()
 }
 
 /// The first assistant text in an OpenAI-shaped reply, trimmed for display.

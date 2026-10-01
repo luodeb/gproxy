@@ -1,7 +1,7 @@
 mod credential_secret;
 mod inputs;
-pub(super) mod map;
-pub(super) mod validators;
+pub(crate) mod map;
+pub(crate) mod validators;
 mod write;
 
 use bytes::Bytes;
@@ -10,7 +10,7 @@ use http::{Response, StatusCode};
 use crate::route::Entity;
 use crate::{AdminError, State, response};
 
-pub(super) async fn list(
+pub(crate) async fn list(
     state: &impl State,
     entity: Entity,
 ) -> Result<Response<Bytes>, AdminError> {
@@ -87,7 +87,7 @@ pub(super) async fn list(
     }
 }
 
-pub(super) async fn create(
+pub(crate) async fn create(
     state: &impl State,
     entity: Entity,
     body: &Bytes,
@@ -95,7 +95,7 @@ pub(super) async fn create(
     write::create(state, entity, body).await
 }
 
-pub(super) async fn update(
+pub(crate) async fn update(
     state: &impl State,
     entity: Entity,
     id: i64,
@@ -104,7 +104,7 @@ pub(super) async fn update(
     write::update(state, entity, id, body).await
 }
 
-pub(super) async fn delete(
+pub(crate) async fn delete(
     state: &impl State,
     entity: Entity,
     id: i64,
@@ -128,14 +128,14 @@ pub(super) async fn delete(
     crate::handlers::util::updated(state, applied).await
 }
 
-pub(super) async fn credential_health_reset(
+pub(crate) async fn credential_health_reset(
     state: &impl State,
     id: i64,
 ) -> Result<Response<Bytes>, AdminError> {
     write::credential_health_reset(state, id).await
 }
 
-pub(super) async fn credential_secret(
+pub(crate) async fn credential_secret(
     state: &impl State,
     id: i64,
 ) -> Result<Response<Bytes>, AdminError> {

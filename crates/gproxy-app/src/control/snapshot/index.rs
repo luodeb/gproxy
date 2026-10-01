@@ -19,7 +19,12 @@ pub(super) fn exposed(
     let available = stored
         .exposed_models
         .iter()
-        .filter(|model| model.enabled && routes.contains_key(&model.route_id))
+        .filter(|model| {
+            model.enabled
+                && routes
+                    .get(&model.route_id)
+                    .is_some_and(|route| !route.targets.is_empty())
+        })
         .collect::<Vec<_>>();
     let base_names = available
         .iter()

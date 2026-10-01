@@ -7,11 +7,8 @@ import type { PortalLoginRequest } from "@/generated/PortalLoginRequest"
 import type { PortalPasswordChangeRequest } from "@/generated/PortalPasswordChangeRequest"
 import type { PortalSessionStatusDto } from "@/generated/PortalSessionStatusDto"
 import type { PortalModelDto } from "@/generated/PortalModelDto"
-import type { PortalQuotaWindowDto } from "@/generated/PortalQuotaWindowDto"
 import type { PortalRecentQueryDto } from "@/generated/PortalRecentQueryDto"
 import type { PortalRecentRequestDto } from "@/generated/PortalRecentRequestDto"
-import type { PortalUsageDto } from "@/generated/PortalUsageDto"
-import type { PortalUsageQueryDto } from "@/generated/PortalUsageQueryDto"
 import type { UserKeyCreateResponse } from "@/generated/UserKeyCreateResponse"
 import type { UserKeyDto } from "@/generated/UserKeyDto"
 import { ApiError, json } from "@/api/client"
@@ -49,13 +46,42 @@ export const portalChangePassword = (value: PortalPasswordChangeRequest) =>
 export const portalModels = (signal?: AbortSignal) =>
   portalApi<Array<PortalModelDto>>("/portal/api/models", signal)
 
-export function portalUsage(query: PortalUsageQueryDto, signal?: AbortSignal) {
-  const params = new URLSearchParams({ from: String(query.from), to: String(query.to) })
-  return portalApi<PortalUsageDto>(`/portal/api/usage?${params}`, signal)
+export type PortalUsagePointDto = {
+  bucket_start: number
+  requests: number
+  input_tokens: number
+  output_tokens: number
+  cached_input_tokens: number
+  cost: string
 }
 
-export const portalQuotaWindows = (signal?: AbortSignal) =>
-  portalApi<Array<PortalQuotaWindowDto>>("/portal/api/quota-windows", signal)
+export type PortalUsageModelDto = {
+  model: string
+  requests: number
+  input_tokens: number
+  output_tokens: number
+  cached_input_tokens: number
+  cost: string
+}
+
+export type PortalUsageOverviewDto = {
+  from: number
+  to: number
+  requests: number
+  input_tokens: number
+  output_tokens: number
+  cached_input_tokens: number
+  cost: string
+  series: Array<PortalUsagePointDto>
+  models: Array<PortalUsageModelDto>
+}
+
+export function portalUsageOverview(query: { from: number; to: number; user_key_id?: number; model?: string }, signal?: AbortSignal) {
+  const params = new URLSearchParams({ from: String(query.from), to: String(query.to) })
+  if (query.user_key_id != null) params.set("user_key_id", String(query.user_key_id))
+  if (query.model) params.set("model", query.model)
+  return portalApi<PortalUsageOverviewDto>(`/portal/api/usage/overview?${params}`, signal)
+}
 
 export function portalRecentRequests(query: PortalRecentQueryDto, signal?: AbortSignal) {
   const params = new URLSearchParams()
@@ -65,6 +91,14 @@ export function portalRecentRequests(query: PortalRecentQueryDto, signal?: Abort
 }
 
 export const portalKeys = (signal?: AbortSignal) => portalApi<Array<UserKeyDto>>("/portal/api/keys", signal)
+
+export type PortalKeyModelsDto = { available: Array<string>; allowed: Array<string> }
+
+export const portalKeyModels = (id: number, signal?: AbortSignal) =>
+  portalApi<PortalKeyModelsDto>(`/portal/api/keys/${id}/models`, signal)
+
+export const setPortalKeyModels = (id: number, models: Array<string>) =>
+  portalApi<PortalKeyModelsDto>(`/portal/api/keys/${id}/models`, undefined, json("PUT", { models }))
 
 export const portalOAuthSessions = (activeOnly: boolean, limit: number, offset: number, signal?: AbortSignal) =>
   portalApi<OAuthSessionPageDto>(`/portal/api/oauth-sessions?${new URLSearchParams({ active_only: String(activeOnly), limit: String(limit), offset: String(offset) })}`, signal)

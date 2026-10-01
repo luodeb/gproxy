@@ -302,6 +302,7 @@ pub const TABLES: &[TableSpec] = &[
             Col::id(),
             Col::required("name", Text).unique(),
             Col::required("route_id", Integer),
+            Col::optional("display_name", Text).since(SchemaVersion::ExposedModelDisplay),
             Col::required("enabled", Integer),
         ],
         owns: &[],

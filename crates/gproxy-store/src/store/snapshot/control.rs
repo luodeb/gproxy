@@ -121,6 +121,7 @@ pub(super) fn exposed_models(result: QueryResult) -> Result<Vec<ExposedModelReco
                 id: row.i64("id")?,
                 name: row.text("name")?.to_owned(),
                 route_id: row.i64("route_id")?,
+                display_name: row.optional_text("display_name")?.map(str::to_owned),
                 enabled: row.i64("enabled")? != 0,
             })
         })

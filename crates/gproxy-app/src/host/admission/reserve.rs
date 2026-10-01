@@ -24,7 +24,7 @@ pub(in crate::host) fn admit<'a>(
             .services
             .control
             .authorization_model(model, &request.mode);
-        let plan = authorize(&snapshot, identity, operation, model.as_deref(), plan)?;
+        let plan = authorize(&snapshot, identity, operation, model.as_deref(), plan, request.force_model_refresh)?;
         let now = unix_now();
         let mut charged = Vec::new();
         let reservations = match super::quota::reserve(
@@ -67,6 +67,7 @@ pub(in crate::host) fn admit<'a>(
         }
 
         let state = AdmissionState {
+            exempt: request.force_model_refresh,
             identity: IdentityState::from(identity),
             model,
             operation: operation.map(|key| key.operation().id().to_owned()),

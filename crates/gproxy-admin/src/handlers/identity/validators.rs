@@ -85,7 +85,7 @@ pub(super) async fn permission(
     subject(state, &input.subject_kind, input.subject_id).await?;
     operation_group(input.operation_group.as_deref())?;
     if let Some(provider_id) = input.provider_id {
-        super::super::control::validators::provider(state, provider_id).await?;
+        crate::control::validators::provider(state, provider_id).await?;
     }
     Ok(())
 }

@@ -11,10 +11,12 @@ import { oauthReturnUrl } from "@/lib/oauth-callback"
 import { usePortalLocation } from "@/lib/portal-route"
 
 const OverviewPage = lazy(() => import("@/pages/portal/overview").then((module) => ({ default: module.PortalOverviewPage })))
+const ProvidersPage = lazy(() => import("@/pages/portal/providers").then((module) => ({ default: module.PortalProvidersPage })))
 const ConnectPage = lazy(() => import("@/pages/portal/connect").then((module) => ({ default: module.PortalConnectPage })))
 const UsagePage = lazy(() => import("@/pages/portal/usage").then((module) => ({ default: module.PortalUsagePage })))
 const KeysPage = lazy(() => import("@/pages/portal/keys").then((module) => ({ default: module.PortalKeysPage })))
 const SessionsPage = lazy(() => import("@/pages/portal/sessions").then((module) => ({ default: module.PortalSessionsPage })))
+const SettingsPage = lazy(() => import("@/pages/portal/settings").then((module) => ({ default: module.PortalSettingsPage })))
 
 type PortalSession = { context: PortalContextDto }
 
@@ -91,7 +93,7 @@ export function PortalPage() {
     return <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"><OAuthConsent authorization={authorization} deviceCode={deviceCode} /></main>
   }
 
-  const page = { overview: <OverviewPage />, connect: <ConnectPage />, usage: <UsagePage />, keys: <KeysPage />, sessions: <SessionsPage /> }[route]
+  const page = { overview: <OverviewPage />, providers: <ProvidersPage />, connect: <ConnectPage />, usage: <UsagePage />, keys: <KeysPage />, sessions: <SessionsPage />, settings: <SettingsPage /> }[route]
 
   return (
     <PortalSessionProvider value={{ context: session.context, logout: () => void logout() }}>

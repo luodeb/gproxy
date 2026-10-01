@@ -194,3 +194,5 @@ pub(crate) const XAI: ChannelTrafficPolicy = ChannelTrafficPolicy::new(
     &["x-grok-*", "x-ratelimit-*", "x-request-id"],
     NONE,
 );
+
+pub(crate) const KYLINTRAE: ChannelTrafficPolicy = ChannelTrafficPolicy::new(NONE, NONE, NONE);
