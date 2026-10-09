@@ -35,12 +35,13 @@ set -euo pipefail
 root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 cd "$root"
 
-DEPLOY_HOST="${DEPLOY_HOST:-yocto}"
-DEPLOY_DIR="${DEPLOY_DIR:-/home/yocto/gproxy}"
-DEPLOY_RUNTIME="${DEPLOY_RUNTIME:-auto}"
+DEPLOY_HOST="${DEPLOY_HOST:-ai}"
+DEPLOY_DIR="${DEPLOY_DIR:-/opt/gproxy}"
+DEPLOY_RUNTIME="${DEPLOY_RUNTIME:-systemd}"
 DEPLOY_CONTAINER="${DEPLOY_CONTAINER:-gproxy}"
 DEPLOY_COMPOSE="${DEPLOY_COMPOSE:-$DEPLOY_DIR/container}"
 DEPLOY_SERVICE="${DEPLOY_SERVICE:-gproxy.service}"
+DEPLOY_SYSTEM="${DEPLOY_SYSTEM:-system}"   # system | user：systemd 单元层级
 DEPLOY_PORT="${DEPLOY_PORT:-58881}"
 TARGET="${TARGET:-x86_64-unknown-linux-musl}"
 ZIG_VERSION="${ZIG_VERSION:-0.15.2}"
@@ -231,12 +232,14 @@ deploy() {
         ok "容器运行中（supervisord 内存活）"
       fi
     else
+      # --user 重启的是用户级单元（旧 yocto 部署）；系统级单元用 plain systemctl
       log "重启 $DEPLOY_SERVICE"
-      run ssh -o BatchMode=yes "$DEPLOY_HOST" "systemctl --user restart '$DEPLOY_SERVICE'"
+      if [ "$DEPLOY_SYSTEM" = user ]; then SUDO="systemctl --user"; else SUDO="systemctl"; fi
+      run ssh -o BatchMode=yes "$DEPLOY_HOST" "$SUDO restart '$DEPLOY_SERVICE'"
       $dry_run || sleep 4
       if ! $dry_run; then
-        ssh -o BatchMode=yes "$DEPLOY_HOST" "systemctl --user is-active '$DEPLOY_SERVICE'" \
-          | grep -qx active || die "服务未处于 active，请查看 journalctl --user -u $DEPLOY_SERVICE"
+        ssh -o BatchMode=yes "$DEPLOY_HOST" "$SUDO is-active '$DEPLOY_SERVICE'" \
+          | grep -qx active || die "服务未处于 active，请查看 journalctl -u $DEPLOY_SERVICE"
         ok "服务 active"
       fi
     fi
