@@ -347,11 +347,10 @@
       "modelsEmpty": "最近 5 分鐘沒有使用模型。",
       "sessionRequests": "{{count}} 次請求",
       "loadError": "無法載入即時活動。",
-      "requestsTitle": "活動請求",
-      "requestsEmpty": "最近沒有請求。",
-      "elapsedSeconds": "{{count}} 秒",
+      "online": "線上",
+      "offline": "離線",
       "sessionSpeed": "{{speed}} tok/s",
-      "finishedMeta": "{{latency}}ms · {{tokens}} tokens"
+      "sessionSummary": "{{requests}} 次請求 · {{tokens}} tokens"
     }
   }
 }

@@ -117,17 +117,20 @@ pub(super) async fn get(state: &impl State, identity: &PortalIdentity) -> Result
     let minute_rows = state.store().usage_aggregate(&minute_scope).await?;
     let mut minute_requests = 0_u64;
     let mut minute_tokens = 0_u64;
-    let mut key_minute_tokens: std::collections::HashMap<i64, u64> = std::collections::HashMap::new();
+    // Speed counts generated tokens only: folding input (cache reads dwarf
+    // output for coding agents) into the divisor made every session look
+    // orders of magnitude faster than the model actually writes.
+    let mut key_minute_output: std::collections::HashMap<i64, u64> = std::collections::HashMap::new();
     for row in &minute_rows {
         minute_requests += row.requests;
         minute_tokens += row.input_tokens + row.output_tokens;
         if let Some(key_id) = row.user_key_id {
-            *key_minute_tokens.entry(key_id).or_default() += row.input_tokens + row.output_tokens;
+            *key_minute_output.entry(key_id).or_default() += row.output_tokens;
         }
     }
     for session in &mut sessions {
-        let tokens = key_minute_tokens.get(&session.key_id).copied().unwrap_or_default();
-        session.tokens_per_second = tokens as f64 / 60.0;
+        let output = key_minute_output.get(&session.key_id).copied().unwrap_or_default();
+        session.tokens_per_second = output as f64 / 60.0;
     }
 
     // Requests in flight right now, oldest first.

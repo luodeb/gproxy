@@ -11,9 +11,13 @@ import { formatCount } from "@/lib/format"
 /// room full of open overviews does not become the gateway's busiest client.
 const REFRESH_MS = 3_000
 
-/// The live view: requests in flight right now (id, key, model, how long they
-/// have been running), the last minute's traffic, and per-key throughput.
-/// Polls on an interval — numbers move on their own while the page sits open.
+/// A session counts as online until it has been quiet for this long. Shorter
+/// than the aggregate window, so a pause between turns does not flash offline.
+const ONLINE_SECONDS = 60
+
+/// The live view, one row per session: which keys are talking, on which
+/// models, how fast they generate, online until quiet for a minute. Polls on
+/// an interval — numbers move on their own while the page sits open.
 export function Activity() {
   const { t, i18n } = useTranslation()
   const activity = useQuery({
@@ -29,12 +33,15 @@ export function Activity() {
     return () => window.clearInterval(timer)
   }, [])
 
+  const now = activity.data?.now
+  const sessions = activity.data?.sessions ?? []
+  const onlineCount = sessions.filter((session) => now != null && now - session.last_at < ONLINE_SECONDS).length
   const live = (activity.data?.in_flight ?? 0) > 0
   const tiles: Array<[string, string]> = [
     [t("portal.activity.inFlight"), String(activity.data?.in_flight ?? 0)],
     [t("portal.activity.requestsPerMinute"), formatCount(activity.data?.last_minute_requests ?? 0, i18n.language)],
     [t("portal.activity.tokensPerMinute"), formatCount(activity.data?.last_minute_tokens ?? 0, i18n.language)],
-    [t("portal.activity.activeSessions"), String(activity.data?.sessions.length ?? 0)],
+    [t("portal.activity.activeSessions"), String(onlineCount)],
   ]
 
   return (
@@ -58,98 +65,69 @@ export function Activity() {
           </dl>
 
           <section className="mt-4 flex flex-col gap-2">
-            <h3 className="text-sm font-medium">{t("portal.activity.requestsTitle")}</h3>
-            <RequestList requests={activity.data?.requests ?? []} recent={activity.data?.recent ?? []} />
+            <h3 className="text-sm font-medium">{t("portal.activity.sessionsTitle")}</h3>
+            <SessionList sessions={sessions} now={now} />
           </section>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <section className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium">{t("portal.activity.sessionsTitle")}</h3>
-              <SessionList sessions={activity.data?.sessions ?? []} now={activity.data?.now} />
-            </section>
-            <section className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium">{t("portal.activity.modelsTitle")}</h3>
-              <ModelList models={activity.data?.models ?? []} now={activity.data?.now} />
-            </section>
-          </div>
+          <section className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium">{t("portal.activity.modelsTitle")}</h3>
+            <ModelList models={activity.data?.models ?? []} now={now} />
+          </section>
         </QueryState>
       </CardContent>
     </Card>
   )
 }
 
-type LiveRequest = { request_id: string; prefix: string | null; label: string | null; model: string | null; started_at: number }
-type FinishedRequest = { request_id: string; prefix: string | null; label: string | null; model: string; provider: string | null; input_tokens: number; output_tokens: number; at: number; latency_ms: number }
-
-/// One list, two states: what is running now (pulsing, counting up) and what
-/// just finished (dimmed, with how long it took). The finished rows are what
-/// keep the panel informative between polls — most requests are over in a
-/// second or two, so an in-flight-only list is usually empty.
-function RequestList({ requests, recent }: { requests: Array<LiveRequest>; recent: Array<FinishedRequest> }) {
-  const { t, i18n } = useTranslation()
-  if (requests.length === 0 && recent.length === 0) return <p className="text-sm text-muted-foreground">{t("portal.activity.requestsEmpty")}</p>
-  const now = Date.now()
-  return (
-    <div className="flex flex-col gap-1">
-      {requests.map((request) => {
-        const tail = request.request_id.split("-").pop() ?? request.request_id
-        const elapsed = Math.max(0, Math.round((now - request.started_at) / 1000))
-        return (
-          <div key={`live-${request.request_id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-3 py-2">
-            <span className="flex size-2 shrink-0 animate-pulse rounded-full bg-state-healthy" aria-hidden />
-            <span className="font-mono text-xs text-muted-foreground" title={request.request_id}>…{tail}</span>
-            <span className="min-w-0 truncate text-sm">{request.label ?? request.prefix ?? t("portal.keys.unnamed")}</span>
-            <span className="min-w-0 truncate font-mono text-xs">{request.model ?? "—"}</span>
-            <span className="ml-auto font-mono text-xs text-muted-foreground">{t("portal.activity.elapsedSeconds", { count: elapsed })}</span>
-          </div>
-        )
-      })}
-      {recent.map((request) => {
-        const tail = request.request_id.split("-").pop() ?? request.request_id
-        const tokens = request.input_tokens + request.output_tokens
-        return (
-          <div key={`done-${request.request_id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-3 py-2 opacity-70">
-            <span className="size-2 shrink-0 rounded-full bg-muted-foreground/40" aria-hidden />
-            <span className="font-mono text-xs text-muted-foreground" title={request.request_id}>…{tail}</span>
-            <span className="min-w-0 truncate text-sm">{request.label ?? request.prefix ?? t("portal.keys.unnamed")}</span>
-            <span className="min-w-0 truncate font-mono text-xs">{request.model}</span>
-            {request.provider ? <span className="truncate text-xs text-muted-foreground">{request.provider}</span> : null}
-            <span className="ml-auto font-mono text-xs text-muted-foreground">
-              {t("portal.activity.finishedMeta", { latency: request.latency_ms, tokens: formatCount(tokens, i18n.language) })} · {agoLabel(request.at, Math.floor(now / 1000), i18n.language, "")}
-            </span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
+/// One row per session: identity, the models it touched, what it did in the
+/// window, and its generating speed while online. A session stays online for
+/// {@link ONLINE_SECONDS} after its last activity — the in-flight registry
+/// keeps it online mid-request even before any usage row has landed.
 function SessionList({ sessions, now }: { sessions: Array<PortalActivitySessionDto>; now: number | undefined }) {
   const { t, i18n } = useTranslation()
   if (sessions.length === 0) return <p className="text-sm text-muted-foreground">{t("portal.activity.sessionsEmpty")}</p>
+  const sorted = [...sessions].sort((left, right) => {
+    const leftOnline = now != null && now - left.last_at < ONLINE_SECONDS
+    const rightOnline = now != null && now - right.last_at < ONLINE_SECONDS
+    return leftOnline === rightOnline ? right.last_at - left.last_at : leftOnline ? -1 : 1
+  })
   return (
     <div className="flex flex-col gap-2">
-      {sessions.map((session) => (
-        <div key={session.key_id} className="flex flex-col gap-1 rounded-md border px-3 py-2">
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="min-w-0 truncate text-sm">{session.label ?? session.prefix ?? `#${session.key_id}`}</span>
-              {session.prefix ? <span className="truncate font-mono text-xs text-muted-foreground">{session.prefix}</span> : null}
-            </span>
-            <span className="font-mono text-xs text-muted-foreground">
-              {t("portal.activity.sessionRequests", { count: session.requests })} · {agoLabel(session.last_at, now, i18n.language, "")}
-            </span>
+      {sorted.map((session) => {
+        const online = now != null && now - session.last_at < ONLINE_SECONDS
+        const tokens = session.input_tokens + session.output_tokens
+        return (
+          <div key={session.key_id} className="flex flex-col gap-1 rounded-md border px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <span className="flex min-w-0 items-center gap-2">
+                <span
+                  className={`size-2 shrink-0 rounded-full ${online ? "animate-pulse bg-state-healthy" : "bg-muted-foreground/40"}`}
+                  aria-label={online ? t("portal.activity.online") : t("portal.activity.offline")}
+                  title={online ? t("portal.activity.online") : t("portal.activity.offline")}
+                />
+                <span className="min-w-0 truncate text-sm">{session.label ?? session.prefix ?? `#${session.key_id}`}</span>
+                {session.prefix ? <span className="truncate font-mono text-xs text-muted-foreground">{session.prefix}</span> : null}
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                {online
+                  ? (session.tokens_per_second > 0 ? t("portal.activity.sessionSpeed", { speed: session.tokens_per_second.toFixed(1) }) : t("portal.activity.online"))
+                  : t("portal.activity.offline")}
+                {" · "}{agoLabel(session.last_at, now, i18n.language, "")}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <span className="flex flex-wrap gap-1">
+                {session.models.map((model) => (
+                  <span key={model} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.65rem] text-muted-foreground">{model}</span>
+                ))}
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                {t("portal.activity.sessionSummary", { requests: session.requests, tokens: formatCount(tokens, i18n.language) })}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-            <span className="flex flex-wrap gap-1">
-              {session.models.map((model) => (
-                <span key={model} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.65rem] text-muted-foreground">{model}</span>
-              ))}
-            </span>
-            <span className="font-mono text-xs text-muted-foreground">{t("portal.activity.sessionSpeed", { speed: session.tokens_per_second.toFixed(1) })}</span>
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

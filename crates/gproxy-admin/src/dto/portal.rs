@@ -356,7 +356,8 @@ pub struct PortalActivitySessionDto {
     pub output_tokens: u64,
     pub last_at: i64,
     pub models: Vec<String>,
-    /// Rough throughput: the key's tokens over the last minute, divided by 60.
+    /// Generated-token throughput: the key's output tokens over the last
+    /// minute, divided by 60. Zero when the key wrote nothing recently.
     pub tokens_per_second: f64,
 }
 

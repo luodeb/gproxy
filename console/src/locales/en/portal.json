@@ -347,11 +347,10 @@
       "modelsEmpty": "No models used in the last 5 minutes.",
       "sessionRequests": "{{count}} requests",
       "loadError": "Could not load live activity.",
-      "requestsTitle": "Activity requests",
-      "requestsEmpty": "No recent requests.",
-      "elapsedSeconds": "{{count}}s",
+      "online": "online",
+      "offline": "offline",
       "sessionSpeed": "{{speed}} tok/s",
-      "finishedMeta": "{{latency}}ms · {{tokens}} tokens"
+      "sessionSummary": "{{requests}} requests · {{tokens}} tokens"
     }
   }
 }
