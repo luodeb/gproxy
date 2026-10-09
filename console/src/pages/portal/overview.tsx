@@ -5,6 +5,7 @@ import { portalRecentRequests, portalUsageOverview } from "@/api/portal"
 import { QueryState } from "@/components/query-state"
 import { UsageChart, type UsageMetric } from "@/components/portal/usage-chart"
 import { RecentRequests } from "@/components/portal/recent-requests"
+import { Activity } from "@/components/portal/activity"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { usePortalSession } from "@/lib/portal-session-context"
@@ -35,6 +36,7 @@ export function PortalOverviewPage() {
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">{t("portal.overview.description")}</p>
       </section>
       <div className="mt-6 flex flex-col gap-6">
+        <Activity />
         <Card>
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>{t("portal.usage.trend")}</CardTitle>
