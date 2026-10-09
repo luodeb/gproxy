@@ -4,7 +4,6 @@ import {
   BoxesIcon,
   CableIcon,
   ChartNoAxesCombinedIcon,
-  ChevronsUpDownIcon,
   KeyRoundIcon,
   LayoutDashboardIcon,
   LogOutIcon,
@@ -12,17 +11,8 @@ import {
   PanelLeftOpenIcon,
   SettingsIcon,
   ShieldCheckIcon,
-  UserIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { usePortalSession } from "@/lib/portal-session-context"
 import { SidebarResizeHandle } from "@/components/sidebar-resize-handle"
 import { useSidebarPreferences } from "@/components/use-sidebar-preferences"
@@ -69,7 +59,7 @@ export function PortalShell({ route, children }: { route: PortalRoute; children:
               </Button>
             ))}
           </nav>
-          <UserMenu collapsed={sidebar.collapsed} username={context.user_name} onLogout={logout} onSettings={() => navigatePortalPath(portalPath("settings"))} />
+          <UserMenu collapsed={sidebar.collapsed} username={context.user_name} onLogout={logout} />
         </div>
         {!sidebar.collapsed ? <SidebarResizeHandle label={t("portal.nav.resize")} width={sidebar.width} minWidth={sidebar.minWidth} maxWidth={sidebar.maxWidth} onWidth={sidebar.setWidth} onReset={sidebar.resetWidth} /> : null}
       </aside>
@@ -78,35 +68,21 @@ export function PortalShell({ route, children }: { route: PortalRoute; children:
   )
 }
 
-function UserMenu({ collapsed, username, onLogout, onSettings }: { collapsed: boolean; username: string; onLogout: () => void; onSettings: () => void }) {
+function UserMenu({ collapsed, username, onLogout }: { collapsed: boolean; username: string; onLogout: () => void }) {
   const { t } = useTranslation()
   const initial = username.trim().charAt(0).toUpperCase() || "?"
+  const logout = t("portal.account.logout")
   return (
     <div className="border-t p-2">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className={cn("h-11 w-full justify-start gap-3 px-2", collapsed && "lg:justify-center")} aria-label={t("portal.account.openMenu")}>
-            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted font-mono text-xs font-semibold" aria-hidden>{initial}</span>
-            <span className={cn("min-w-0 flex-1 truncate text-left text-sm", collapsed && "lg:sr-only")}>{username}</span>
-            <ChevronsUpDownIcon className={cn("size-4 shrink-0 text-muted-foreground", collapsed && "lg:sr-only")} aria-hidden />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" side="top" className="w-56">
-          <DropdownMenuLabel className="flex items-center gap-2 font-normal">
-            <UserIcon className="size-4 text-muted-foreground" aria-hidden />
-            <span className="truncate font-mono text-xs">{username}</span>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={onSettings}>
-            <SettingsIcon aria-hidden />
-            {t("portal.account.settings")}
-          </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onSelect={onLogout}>
-            <LogOutIcon aria-hidden />
-            {t("portal.account.logout")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* The user area is display-only; only the sign-out button acts, so a stray
+          click on the identity cannot end the session. */}
+      <div className={cn("flex items-center gap-2 px-2 py-1.5", collapsed && "lg:justify-center")}>
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted font-mono text-xs font-semibold" aria-hidden>{initial}</span>
+        <span className={cn("min-w-0 flex-1 truncate text-sm", collapsed && "lg:sr-only")}>{username}</span>
+        <Button size="icon-sm" variant="ghost" title={logout} aria-label={logout} onClick={onLogout}>
+          <LogOutIcon aria-hidden />
+        </Button>
+      </div>
       <p className={cn("hidden px-2 pt-1 font-mono text-[0.65rem] text-muted-foreground lg:block", collapsed && "lg:hidden")}>{buildIdentity()}</p>
     </div>
   )

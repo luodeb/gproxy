@@ -1,4 +1,5 @@
 import { Fragment, useDeferredValue, useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react"
+import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { DataTablePagination, type PageSize } from "@/components/data-table-pagination"
 import { storePageSize, useColumnVisibility, usePageSize } from "@/components/data-table-state"
@@ -142,6 +143,7 @@ export function DataTable<T>({
             <Table>
               <TableHeader><TableRow>
                 {selecting ? <TableHead className="w-10"><Checkbox checked={allSelected ? true : someSelected ? "indeterminate" : false} onCheckedChange={toggleAll} aria-label={t("common.dataTable.selectAll")} /></TableHead> : null}
+                {renderExpandedRow && !selecting ? <TableHead className="w-8" /> : null}
                 {visibleColumns.map((column) => <TableHead key={column.key} className={column.className}>{column.header}</TableHead>)}
               </TableRow></TableHeader>
               <TableBody>{visibleRows.map((row) => {
@@ -150,9 +152,10 @@ export function DataTable<T>({
                 const expanded = !selecting && id === activeRowKey && renderExpandedRow != null
                 return <Fragment key={id}><TableRow data-state={selected.has(id) || id === activeRowKey ? "selected" : undefined} aria-expanded={renderExpandedRow && !selecting ? expanded : undefined} tabIndex={clickable ? 0 : undefined} onClick={open(row)} onKeyDown={activate(row)} className={cn(clickable && "cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset")}>
                   {selecting ? <TableCell><Checkbox checked={selected.has(id)} onClick={(event) => event.stopPropagation()} onCheckedChange={() => toggleRow(id)} aria-label={t("common.dataTable.selectRow")} /></TableCell> : null}
+                  {renderExpandedRow && !selecting ? <TableCell className="w-8">{expanded ? <ChevronDownIcon className="size-4 text-muted-foreground" aria-hidden /> : <ChevronRightIcon className="size-4 text-muted-foreground" aria-hidden />}</TableCell> : null}
                   {visibleColumns.map((column) => <TableCell key={column.key} className={column.className}>{column.cell(row)}</TableCell>)}
                 </TableRow>
-                  {expanded ? <TableRow><TableCell colSpan={Math.max(visibleColumns.length, 1)} className="whitespace-normal">{renderExpandedRow(row)}</TableCell></TableRow> : null}
+                  {expanded ? <TableRow><TableCell colSpan={Math.max(visibleColumns.length, 1)} className="whitespace-normal"><div className="rounded-md border bg-muted/20 px-3 py-3">{renderExpandedRow(row)}</div></TableCell></TableRow> : null}
                 </Fragment>
               })}</TableBody>
             </Table>
@@ -164,10 +167,11 @@ export function DataTable<T>({
             return <Fragment key={id}><Card role={clickable ? "button" : undefined} aria-expanded={renderExpandedRow && !selecting ? expanded : undefined} tabIndex={clickable ? 0 : undefined} onClick={open(row)} onKeyDown={activate(row)} className={cn(clickable && "cursor-pointer focus-visible:ring-2 focus-visible:ring-ring", (selected.has(id) || id === activeRowKey) && "ring-2 ring-ring")}>
               <CardContent className="flex items-start gap-3">
                 {selecting ? <Checkbox checked={selected.has(id)} onClick={(event) => event.stopPropagation()} onCheckedChange={() => toggleRow(id)} aria-label={t("common.dataTable.selectRow")} /> : null}
+                {renderExpandedRow && !selecting ? (expanded ? <ChevronDownIcon className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden /> : <ChevronRightIcon className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden />) : null}
                 <div className="min-w-0 flex-1">{renderCard(row)}</div>
               </CardContent>
             </Card>
-              {expanded ? renderExpandedRow(row) : null}
+              {expanded ? <div className="rounded-md border bg-muted/20 px-3 py-3">{renderExpandedRow(row)}</div> : null}
             </Fragment>
           })}</div>
         </>

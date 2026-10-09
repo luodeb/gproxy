@@ -37,7 +37,9 @@ test("the portal sidebar lists the routed sections and shows the user at the bot
     expect(screen.getByRole("button", { name: label })).toBeInTheDocument()
   }
   expect(nav).toBeInTheDocument()
-  expect(screen.getByRole("button", { name: "Account menu" })).toHaveTextContent("Ada Lovelace")
+  // The identity row is display-only; sign-out is its own small button.
+  expect(screen.getByText("Ada Lovelace")).toBeInTheDocument()
+  expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument()
   expect(screen.getByText("panel body")).toBeInTheDocument()
 })
 
@@ -48,12 +50,10 @@ test("clicking a section navigates to its URL", async () => {
   expect(window.location.pathname).toBe("/portal/keys")
 })
 
-test("the user menu navigates to the settings page", async () => {
-  const user = userEvent.setup()
+test("the user area has no menu and settings lives in the nav", () => {
   renderShell()
-  await user.click(screen.getByRole("button", { name: "Account menu" }))
-  await user.click(await screen.findByRole("menuitem", { name: "Settings" }))
-  expect(window.location.pathname).toBe("/portal/settings")
+  expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument()
+  expect(screen.queryByRole("button", { name: "Account menu" })).not.toBeInTheDocument()
 })
 
 test("the sidebar keeps its own preferences, separate from the console's", async () => {
@@ -64,7 +64,7 @@ test("the sidebar keeps its own preferences, separate from the console's", async
   expect(window.localStorage.getItem("gproxy.sidebar.preferences")).toBeNull()
 })
 
-test("logout is reachable from the user menu", async () => {
+test("the sidebar user area is display-only and only the sign-out button acts", async () => {
   const user = userEvent.setup()
   let loggedOut = false
   render(
@@ -76,8 +76,11 @@ test("logout is reachable from the user menu", async () => {
       </ThemeProvider>
     </QueryClientProvider>,
   )
-  await user.click(screen.getByRole("button", { name: "Account menu" }))
-  await user.click(await screen.findByRole("menuitem", { name: "Sign out" }))
+  // Clicking the identity text must not log out…
+  await user.click(screen.getByText("Ada Lovelace"))
+  expect(loggedOut).toBe(false)
+  // …only the dedicated sign-out button does.
+  await user.click(screen.getByRole("button", { name: "Sign out" }))
   expect(loggedOut).toBe(true)
 })
 
