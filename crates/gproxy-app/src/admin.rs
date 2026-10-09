@@ -1,6 +1,8 @@
 mod connectivity;
 mod helpers;
 mod import;
+#[cfg(not(target_arch = "wasm32"))]
+mod mcp_discover;
 mod model_discover;
 mod model_test;
 mod portal;
@@ -36,6 +38,22 @@ impl State for AppHandle {
 
     fn store(&self) -> &gproxy_store::Store {
         &self.inner.host.services.store
+    }
+
+    fn in_flight(&self) -> u64 {
+        self.in_flight()
+    }
+
+    fn in_flight_requests(&self) -> Vec<gproxy_admin::state::ActivityRequest> {
+        self.in_flight_requests()
+            .into_iter()
+            .map(|(request_id, entry)| gproxy_admin::state::ActivityRequest {
+                request_id,
+                user_key_id: entry.user_key_id,
+                model: entry.model,
+                started_at_ms: entry.started_at_ms,
+            })
+            .collect()
     }
 
     fn seal_credential(
@@ -250,6 +268,22 @@ impl State for AppHandle {
         request: &'a gproxy_admin::dto::ModelDiscoverRequest,
     ) -> BoxFuture<'a, Result<gproxy_admin::dto::ModelDiscoverResponse, AdminError>> {
         Box::pin(model_discover::run(self, actor_user_id, request))
+    }
+
+    fn discover_mcp_tools<'a>(
+        &'a self,
+        _actor_user_id: i64,
+        server_id: i64,
+    ) -> BoxFuture<'a, Result<gproxy_admin::dto::PortalMcpDiscoverResponse, AdminError>> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            return Box::pin(mcp_discover::run(self, server_id));
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = server_id;
+            Box::pin(async { Err(AdminError::Forbidden) })
+        }
     }
 
     fn fetch_tokenizer_vocab<'a>(

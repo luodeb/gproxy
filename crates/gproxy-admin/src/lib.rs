@@ -12,7 +12,7 @@ mod portal;
 mod response;
 mod route;
 pub mod runtime_settings;
-mod state;
+pub mod state;
 
 pub use auth::AuthSource;
 pub use credential_label::auto_label as default_credential_label;

@@ -5,6 +5,7 @@ mod credentials;
 mod delete;
 mod identity;
 mod import;
+mod mcp;
 mod oauth;
 mod oauth_clients;
 mod oauth_sessions;

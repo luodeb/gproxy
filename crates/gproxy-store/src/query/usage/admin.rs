@@ -18,6 +18,7 @@ pub(crate) fn aggregate(
                 "user_id",
                 "provider_id",
                 "upstream_model",
+                "at",
                 "input_tokens",
                 "output_tokens",
                 "cached_input_tokens",

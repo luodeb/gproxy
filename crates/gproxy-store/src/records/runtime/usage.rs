@@ -38,6 +38,7 @@ pub struct RecentUsageRecord {
     pub request_id: String,
     pub at: i64,
     pub provider_id: i64,
+    pub user_key_id: Option<i64>,
     pub operation: Option<String>,
     pub upstream_model: String,
     pub input_tokens: u64,
@@ -103,6 +104,8 @@ pub struct UsageAggregateRecord {
     pub cache_creation_30m_tokens: u64,
     pub cache_creation_1h_tokens: u64,
     pub cost: Decimal,
+    /// The newest row in this group; a live-activity view uses it as "last seen".
+    pub last_at: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

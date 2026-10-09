@@ -172,6 +172,15 @@ async fn handle_request(
     if let Some(response) = crate::static_assets::serve(&parts) {
         return crate::response::buffered_response(response, permit, &request_id);
     }
+    // The user-facing MCP gateway sits beside `/v1/*`: same caller, same key,
+    // different protocol. Authentication happens inside the handler, which
+    // resolves the Bearer key per request; like the admin MCP endpoint there is
+    // no `Origin` gate, because an MCP client sends none.
+    if path == gproxy_mcp_gateway::USER_MCP_PATH {
+        let request = Request::from_parts(parts, axum::body::Body::from(body));
+        // Streamed straight through: SSE responses must not be buffered.
+        return state.mcp_gateway.handle(request).await;
+    }
     let body = match gproxy_app::ingress::decode_body(&mut headers, body, MAX_BODY_BYTES) {
         Ok(body) => body,
         Err(error) => return (error.status, error.message).into_response(),

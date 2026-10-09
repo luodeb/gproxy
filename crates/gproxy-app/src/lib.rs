@@ -29,7 +29,7 @@ pub use config::{Config, MasterKeyConfig};
 pub use config::{LogFormat, NativeCommand};
 pub use control::{ControlMutation, MutationResult};
 pub use error::{AppError, ConfigError};
-pub use lifecycle::{App, AppHandle};
+pub use lifecycle::{App, AppHandle, InFlightEntry};
 #[cfg(not(target_arch = "wasm32"))]
 pub use migrate_v2::{V2ImportOptions, V2ImportReport, migrate_from_v2};
 

@@ -1,5 +1,7 @@
+mod activity;
 mod auth;
 mod context;
+mod mcp;
 mod keys;
 mod models;
 mod oauth_sessions;
@@ -27,6 +29,7 @@ pub struct PortalIdentity {
 }
 
 enum Route {
+    Activity,
     Context,
     Models,
     Channels,
@@ -81,6 +84,42 @@ pub async fn dispatch(state: &impl State, parts: &Parts, body: Bytes) -> Option<
         }
         if let Some(id) = path
             .strip_prefix("/portal/api/keys/")
+            .and_then(|value| value.strip_suffix("/mcp"))
+            .and_then(|value| value.parse::<i64>().ok())
+        {
+            return match parts.method {
+                Method::GET => mcp::key_mcp(state, &identity, id).await,
+                Method::PUT => mcp::set_key_mcp(state, &identity, parts, id, &body).await,
+                _ => Err(AdminError::NotFound),
+            };
+        }
+        if path == "/portal/api/mcp-servers" {
+            return match parts.method {
+                Method::GET => mcp::list_servers(state).await,
+                Method::POST => mcp::create_server(state, parts, &body).await,
+                _ => Err(AdminError::NotFound),
+            };
+        }
+        if let Some(id) = path
+            .strip_prefix("/portal/api/mcp-servers/")
+            .and_then(|value| value.strip_suffix("/discover"))
+            .and_then(|value| value.parse::<i64>().ok())
+            && parts.method == Method::POST
+        {
+            return mcp::discover_server(state, parts, &identity, id).await;
+        }
+        if let Some(id) = path
+            .strip_prefix("/portal/api/mcp-servers/")
+            .and_then(|value| value.parse::<i64>().ok())
+        {
+            return match parts.method {
+                Method::PATCH => mcp::update_server(state, parts, id, &body).await,
+                Method::DELETE => mcp::delete_server(state, parts, id).await,
+                _ => Err(AdminError::NotFound),
+            };
+        }
+        if let Some(id) = path
+            .strip_prefix("/portal/api/keys/")
             .and_then(|value| value.strip_suffix("/reveal"))
             .and_then(|value| value.parse::<i64>().ok())
             && parts.method == Method::POST
@@ -101,6 +140,7 @@ pub async fn dispatch(state: &impl State, parts: &Parts, body: Bytes) -> Option<
             return Ok(value);
         }
         match route(&parts.method, path)? {
+            Route::Activity => activity::get(state, &identity).await,
             Route::Context => context::get(state, &identity).await,
             Route::Models => response::json(StatusCode::OK, &models(state, &identity)),
             Route::Channels => response::json(StatusCode::OK, &state.channel_catalogue()),
@@ -265,6 +305,7 @@ fn route(method: &Method, path: &str) -> Result<Route, AdminError> {
         return Err(AdminError::NotFound);
     }
     match path {
+        "/portal/api/activity" => Ok(Route::Activity),
         "/portal/api/context" => Ok(Route::Context),
         "/portal/api/models" => Ok(Route::Models),
         "/portal/api/channels" => Ok(Route::Channels),

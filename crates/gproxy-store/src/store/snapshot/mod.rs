@@ -3,7 +3,7 @@ mod identity;
 mod process;
 
 use crate::backend::QueryResult;
-use crate::query::{control as control_query, identity as identity_query};
+use crate::query::{control as control_query, identity as identity_query, mcp as mcp_query};
 use crate::records::ControlSnapshot;
 use crate::{Store, StoreError};
 
@@ -24,6 +24,7 @@ impl Store {
             control_query::select_provider_model_reasoning_levels()?,
             control_query::select_provider_model_service_tiers()?,
             control_query::select_provider_model_methods()?,
+            mcp_query::select_mcp_servers()?,
             identity_query::select_users()?,
             identity_query::select_user_keys()?,
             identity_query::select_permissions()?,
@@ -55,6 +56,7 @@ impl Store {
                 next(&mut results)?,
                 next(&mut results)?,
             )?,
+            mcp_servers: crate::store::mcp::mcp_servers(next(&mut results)?)?,
             users: identity::users(next(&mut results)?)?,
             user_keys: identity::user_keys(next(&mut results)?)?,
             permissions: identity::permissions(next(&mut results)?)?,

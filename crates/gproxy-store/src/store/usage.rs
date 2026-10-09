@@ -308,7 +308,12 @@ fn accumulate(
         cache_creation_30m_tokens: 0,
         cache_creation_1h_tokens: 0,
         cost: rust_decimal::Decimal::ZERO,
+        last_at: 0,
     });
+    let at = row.i64("at")?;
+    if at > value.last_at {
+        value.last_at = at;
+    }
     checked_add(&mut value.requests, 1, "requests")?;
     checked_add(
         &mut value.input_tokens,

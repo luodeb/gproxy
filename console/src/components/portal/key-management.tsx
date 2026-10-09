@@ -2,8 +2,9 @@ import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { createPortalKey, deletePortalKey, portalKeys, revealPortalKey } from "@/api/portal"
+import { DataTable, type DataTableColumn } from "@/components/data-table"
 import { KeySecretCell } from "@/components/keys/key-secret-cell"
-import { KeyModelsDialog } from "@/components/portal/key-models-dialog"
+import { KeyPermissions } from "@/components/portal/key-permissions"
 import type { UserKeyDto } from "@/generated/UserKeyDto"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -17,7 +18,7 @@ export function KeyManagement() {
   const [label, setLabel] = useState("")
   const [prefix, setPrefix] = useState<"sk" | "at">("sk")
   const [created, setCreated] = useState<string | null>(null)
-  const [modelsKey, setModelsKey] = useState<UserKeyDto | null>(null)
+  const [expandedKey, setExpandedKey] = useState<number | null>(null)
 
   const createKey = useMutation({
     mutationFn: () => createPortalKey({ prefix, label: label.trim() || null, expires_at: null }),
@@ -31,6 +32,37 @@ export function KeyManagement() {
     mutationFn: deletePortalKey,
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["portal", "keys"] }),
   })
+
+  const columns: Array<DataTableColumn<UserKeyDto>> = [
+    {
+      key: "label",
+      label: t("portal.keys.columnLabel"),
+      header: t("portal.keys.columnLabel"),
+      cell: (key) => (
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{key.label ?? t("portal.keys.unnamed")}</p>
+          <KeySecretCell record={key} reveal={() => revealPortalKey(key.id)} />
+        </div>
+      ),
+    },
+    {
+      key: "actions",
+      label: t("portal.keys.columnActions"),
+      header: "",
+      className: "w-px",
+      cell: (key) => (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={removeKey.isPending}
+          onClick={(event) => { event.stopPropagation(); removeKey.mutate(key.id) }}
+        >
+          {t("portal.keys.revoke")}
+        </Button>
+      ),
+    },
+  ]
 
   return (
     <Card>
@@ -53,20 +85,24 @@ export function KeyManagement() {
           <Input value={label} placeholder={t("portal.keys.label")} onChange={(event) => setLabel(event.target.value)} />
           <Button type="submit" disabled={createKey.isPending}>{t("portal.keys.create")}</Button>
         </form>
-        <div className="flex flex-col divide-y rounded-md border">
-          {(keys.data ?? []).map((key) => (
-            <div key={key.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
-              <div className="min-w-0"><p className="truncate text-sm font-medium">{key.label ?? t("portal.keys.unnamed")}</p><KeySecretCell record={key} reveal={() => revealPortalKey(key.id)} /></div>
-              <div className="flex items-center gap-2">
-                <Button type="button" size="sm" variant="outline" onClick={() => setModelsKey(key)}>{t("portal.keys.models")}</Button>
-                <Button type="button" size="sm" variant="outline" disabled={removeKey.isPending} onClick={() => removeKey.mutate(key.id)}>{t("portal.keys.revoke")}</Button>
-              </div>
+        <DataTable<UserKeyDto>
+          columns={columns}
+          rows={keys.data ?? []}
+          rowKey={(key) => key.id}
+          searchText={(key) => `${key.label ?? ""} ${key.prefix ?? ""}`}
+          renderCard={(key) => (
+            <div className="flex min-w-0 flex-col gap-2">
+              <p className="truncate text-sm font-medium">{key.label ?? t("portal.keys.unnamed")}</p>
+              <KeySecretCell record={key} reveal={() => revealPortalKey(key.id)} />
             </div>
-          ))}
-          {!keys.isLoading && (keys.data?.length ?? 0) === 0 ? <p className="p-3 text-sm text-muted-foreground">{t("portal.keys.empty")}</p> : null}
-        </div>
+          )}
+          renderExpandedRow={(key) => <KeyPermissions keyRecord={key} />}
+          activeRowKey={expandedKey}
+          onRowClick={(key) => setExpandedKey((current) => (current === key.id ? null : key.id))}
+          empty={t("portal.keys.empty")}
+          storageKey="portal-keys"
+        />
       </CardContent>
-      <KeyModelsDialog keyRecord={modelsKey} onClose={() => setModelsKey(null)} />
     </Card>
   )
 }

@@ -20,10 +20,12 @@ use crate::cache::AppCache;
 use crate::control::SnapshotControl;
 
 use crate::secrets::EnvelopeCipher;
-#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) use admission::authenticate_headers;
 #[cfg(test)]
 pub(crate) use admission::authorize;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use admission::mcp_permitted;
 pub(crate) use admission::{catalogue_permitted, provider_permitted};
 
 pub(crate) struct Services {

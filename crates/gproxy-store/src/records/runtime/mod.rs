@@ -41,6 +41,7 @@ pub struct ControlSnapshot {
     pub aliases: Vec<AliasRecord>,
     pub exposed_models: Vec<ExposedModelRecord>,
     pub provider_models: Vec<ProviderModelRecord>,
+    pub mcp_servers: Vec<super::McpServerRecord>,
     pub users: Vec<UserRecord>,
     pub user_keys: Vec<UserKeyRecord>,
     pub permissions: Vec<PermissionRecord>,

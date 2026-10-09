@@ -10,10 +10,61 @@ pub struct AppHandle {
     pub(crate) inner: Shared<AppInner>,
 }
 
+/// Removes the registry entry however the request ends — result, error or
+/// panic — so the live panel can never leak a finished request.
+struct InFlightGuard<'a> {
+    registry: &'a std::sync::Mutex<std::collections::HashMap<String, crate::InFlightEntry>>,
+    request_id: String,
+}
+
+impl Drop for InFlightGuard<'_> {
+    fn drop(&mut self) {
+        self.registry
+            .lock()
+            .expect("in-flight registry poisoned")
+            .remove(&self.request_id);
+    }
+}
+
+/// One request currently moving through [`AppHandle::execute`].
+#[derive(Debug, Clone)]
+pub struct InFlightEntry {
+    pub user_key_id: Option<i64>,
+    pub model: Option<String>,
+    pub started_at_ms: i64,
+}
+
+/// Best-effort model name from the head of a request body. Chat-shaped
+/// requests carry `"model"` in their first bytes, so a bounded scan answers
+/// without parsing payloads that can be megabytes.
+fn peek_model(body: &bytes::Bytes) -> Option<String> {
+    let head = &body[..body.len().min(16 * 1024)];
+    let needle = b"\"model\"";
+    let at = head
+        .windows(needle.len())
+        .position(|window| window == needle)?;
+    let rest = &head[at + needle.len()..];
+    let after = rest.iter().position(|byte| *byte == b':')?;
+    let rest = &rest[after + 1..];
+    let start = rest.iter().position(|byte| !byte.is_ascii_whitespace())?;
+    if rest.get(start) != Some(&b'"') {
+        return None;
+    }
+    let rest = &rest[start + 1..];
+    let end = rest.iter().position(|byte| *byte == b'"')?;
+    if end == 0 {
+        return None;
+    }
+    String::from_utf8(rest[..end].to_vec()).ok()
+}
+
 pub(crate) struct AppInner {
     pub core: Core<AppHost>,
     pub host: AppHost,
     pub invalidation_version: std::sync::atomic::AtomicI64,
+    /// Gateway requests admitted but not finished, with what the live panel
+    /// shows about each: which key, which model, since when.
+    pub in_flight: std::sync::Mutex<std::collections::HashMap<String, InFlightEntry>>,
     #[cfg(not(target_arch = "wasm32"))]
     pub shutdown: tokio::sync::watch::Sender<bool>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -55,7 +106,53 @@ impl AppHandle {
         gproxy_admin::portal_dispatch(self, parts, body).await
     }
 
+    /// Requests currently moving through the gateway, oldest first.
+    pub fn in_flight_requests(&self) -> Vec<(String, crate::InFlightEntry)> {
+        let registry = self
+            .inner
+            .in_flight
+            .lock()
+            .expect("in-flight registry poisoned");
+        let mut entries: Vec<_> = registry
+            .iter()
+            .map(|(request_id, entry)| (request_id.clone(), entry.clone()))
+            .collect();
+        entries.sort_by_key(|(_, entry)| entry.started_at_ms);
+        entries
+    }
+
+    /// Requests currently moving through the gateway.
+    pub fn in_flight(&self) -> u64 {
+        self.in_flight_requests().len() as u64
+    }
+
     pub async fn execute(
+        &self,
+        request: RequestCtx,
+    ) -> Result<ExecOutcome, gproxy_core::CoreError> {
+        let entry = crate::InFlightEntry {
+            user_key_id: crate::host::authenticate_headers(&self.inner.host, &request.headers)
+                .ok()
+                .map(|identity| identity.user_key_id),
+            model: peek_model(&request.body),
+            started_at_ms: web_time::SystemTime::now()
+                .duration_since(web_time::UNIX_EPOCH)
+                .map(|elapsed| elapsed.as_millis().try_into().unwrap_or(i64::MAX))
+                .unwrap_or_default(),
+        };
+        self.inner
+            .in_flight
+            .lock()
+            .expect("in-flight registry poisoned")
+            .insert(request.request_id.clone(), entry);
+        let _in_flight = InFlightGuard {
+            registry: &self.inner.in_flight,
+            request_id: request.request_id.clone(),
+        };
+        self.execute_inner(request).await
+    }
+
+    async fn execute_inner(
         &self,
         request: RequestCtx,
     ) -> Result<ExecOutcome, gproxy_core::CoreError> {
@@ -283,4 +380,92 @@ impl AppHandle {
                 .map_err(AppError::from)
         }
     }
+}
+
+/// The end-user MCP gateway reads the same control plane as the rest of the
+/// gateway, from outside the crate. These accessors are the seam: an upstream
+/// service resolves a caller, checks one grant, and opens one server credential.
+#[cfg(not(target_arch = "wasm32"))]
+impl AppHandle {
+    /// Resolve a caller from request headers, exactly as `/v1` does.
+    pub fn mcp_identity(
+        &self,
+        headers: &http::HeaderMap,
+    ) -> Result<gproxy_channel_api::CallerIdentity, gproxy_core::CoreError> {
+        crate::host::authenticate_headers(&self.inner.host, headers)
+    }
+
+    pub fn mcp_snapshot(
+        &self,
+    ) -> std::sync::Arc<gproxy_store::records::ControlSnapshot> {
+        self.inner.host.services.control.current()
+    }
+
+    /// Whether this caller may reach `server_id`, and `tool` on it.
+    pub fn mcp_permitted(
+        &self,
+        identity: &gproxy_channel_api::CallerIdentity,
+        server_id: i64,
+        tool: Option<&str>,
+    ) -> bool {
+        crate::host::mcp_permitted(&self.mcp_snapshot(), identity, server_id, tool)
+    }
+
+    /// The upstream credential of one server, ready for the MCP client. `None`
+    /// means the server needs no auth; a server whose credential is missing or
+    /// unreadable is reported as an internal error rather than silently called
+    /// without one.
+    pub async fn mcp_auth(
+        &self,
+        server_id: i64,
+    ) -> Result<Option<gproxy_upstream::mcp_client::UpstreamMcpAuth>, gproxy_core::CoreError> {
+        use gproxy_upstream::mcp_client::UpstreamMcpAuth;
+        let services = &self.inner.host.services;
+        let Some(server) = services.store.mcp_server(server_id).await.map_err(internal)? else {
+            return Err(gproxy_core::CoreError::Internal(format!(
+                "unknown mcp server {server_id}"
+            )));
+        };
+        match server.auth_kind.as_str() {
+            "none" => Ok(None),
+            "bearer" | "header" => {
+                let secret = services
+                    .store
+                    .mcp_server_secret(server_id)
+                    .await
+                    .map_err(internal)?
+                    .and_then(|record| record.envelope)
+                    .ok_or_else(|| {
+                        gproxy_core::CoreError::Internal(format!(
+                            "mcp server {server_id} has no stored credential"
+                        ))
+                    })?;
+                let opened = services.cipher.open(&secret).map_err(internal)?;
+                let token = opened
+                    .get("token")
+                    .and_then(serde_json::Value::as_str)
+                    .ok_or_else(|| {
+                        gproxy_core::CoreError::Internal(format!(
+                            "mcp server {server_id} credential has no token"
+                        ))
+                    })?;
+                Ok(Some(if server.auth_kind == "bearer" {
+                    UpstreamMcpAuth::Bearer(token.to_owned())
+                } else {
+                    UpstreamMcpAuth::Header(
+                        server.auth_header_name.unwrap_or_else(|| "authorization".into()),
+                        token.to_owned(),
+                    )
+                }))
+            }
+            other => Err(gproxy_core::CoreError::Internal(format!(
+                "mcp server {server_id} has an unsupported auth kind: {other}"
+            ))),
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn internal(error: impl std::fmt::Display) -> gproxy_core::CoreError {
+    gproxy_core::CoreError::Internal(error.to_string())
 }

@@ -20,6 +20,11 @@ impl ConcurrencyLimit {
         })
     }
 
+    /// Requests admitted but not finished — the live-activity gauge.
+    pub fn active(&self) -> usize {
+        self.state.lock().expect("concurrency state poisoned").active
+    }
+
     pub fn set_limit(&self, limit: usize) {
         let mut state = self.state.lock().expect("concurrency state poisoned");
         if state.limit != limit {

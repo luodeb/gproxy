@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { portalModels } from "@/api/portal"
 import { QueryState } from "@/components/query-state"
 import { ConnectionGuide } from "@/components/portal/connection-guide"
+import { McpGuide } from "@/components/portal/mcp-guide"
 
 export function PortalConnectPage() {
   const { t } = useTranslation()
@@ -29,6 +30,7 @@ export function PortalConnectPage() {
             selectedModel={selectedModel}
             onModelChange={setRequestedModel}
           />
+          <McpGuide origin={window.location.origin} apiKey={t("portal.connect.keyPlaceholder")} />
         </div>
       </QueryState>
     </>

@@ -9,6 +9,7 @@ members = [
     "crates/gproxy-host-axum",
     "crates/gproxy-host-edge",
     "crates/gproxy-mcp",
+    "crates/gproxy-mcp-gateway",
     "crates/gproxy-protocol",
     "crates/gproxy-protocol-macros",
     "crates/gproxy-store",
@@ -38,6 +39,7 @@ gproxy-channel-api = { path = "crates/gproxy-channel-api", version = "=3.0.22" }
 gproxy-channels = { path = "crates/gproxy-channels", version = "=3.0.22" }
 gproxy-core = { path = "crates/gproxy-core", version = "=3.0.22" }
 gproxy-mcp = { path = "crates/gproxy-mcp", version = "=3.0.22" }
+gproxy-mcp-gateway = { path = "crates/gproxy-mcp-gateway", version = "=3.0.22" }
 gproxy-protocol = { path = "crates/gproxy-protocol", version = "=3.0.22" }
 gproxy-protocol-macros = { path = "crates/gproxy-protocol-macros", version = "=3.0.22" }
 gproxy-store = { path = "crates/gproxy-store", version = "=3.0.22" }
@@ -65,6 +67,7 @@ quote = "1"
 redis = { version = "1.6", default-features = false, features = ["connection-manager", "tokio-rustls-comp"] }
 rsa = { version = "0.9", features = ["sha2"] }
 regex = "1"
+reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "rustls"] }
 rmcp = { version = "3.5", default-features = false, features = ["server", "transport-streamable-http-server"] }
 rust_decimal = { version = "1", features = ["serde"] }
 ruzstd = "0.9"

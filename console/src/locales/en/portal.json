@@ -53,12 +53,12 @@
       "delete": "Delete",
       "saved": "Saved.",
       "deleted": "Deleted.",
-      "close": "Close"
+      "close": "Close",
+      "loading": "Loading…",
+      "disabled": "Disabled"
     },
     "account": {
-      "logout": "Sign out",
-      "settings": "Settings",
-      "openMenu": "Account menu"
+      "logout": "Sign out"
     },
     "login": {
       "description": "Sign in with the account created by your administrator."
@@ -81,11 +81,24 @@
       "copyError": "Could not copy the key. Select it and copy manually.",
       "remask": "Mask key",
       "masked": "{{prefix}}••••••••••••",
-      "models": "Model access",
       "modelsTitle": "Model access",
       "modelsHint": "Only the checked models this key may call. None = inherit account.",
       "modelsError": "Could not load models.",
-      "modelsEmpty": "No models available."
+      "modelsEmpty": "No models available.",
+      "columnLabel": "Key",
+      "columnActions": "Actions",
+      "mcpTitle": "MCP tool access",
+      "mcpHint": "Servers this key may call, with the tool-name patterns allowed on each. Nothing checked means this key reaches no MCP tools — models above fall back to your account, MCP does not.",
+      "mcpError": "Could not load MCP access for this key.",
+      "mcpEmpty": "No MCP servers are registered.",
+      "mcpToolCount": "{{count}} tools",
+      "mcpAddPattern": "Add pattern",
+      "mcpRemove": "Remove",
+      "mcpRemovePattern": "Remove pattern {{pattern}}",
+      "mcpPatternLabel": "Tool pattern for {{server}}",
+      "mcpPatternPlaceholder": "e.g. web_* — * allows every tool",
+      "mcpPatternHint": "A pattern matches the tool's own name; * allows every tool on that server.",
+      "mcpServerDisabled": "disabled"
     },
     "password": {
       "title": "Password",
@@ -120,7 +133,17 @@
         "codex": "Codex CLI",
         "claudeCode": "Claude Code"
       },
-      "modelsLoadError": "Could not load models. Retry."
+      "modelsLoadError": "Could not load models. Retry.",
+      "mcpTitle": "MCP access",
+      "mcpDescription": "The same API key also reaches the gateway's MCP endpoint: the client connects to one URL and sees exactly the tools this key was granted.",
+      "mcpEndpoint": "MCP endpoint",
+      "mcpCopyEndpoint": "Copy endpoint",
+      "mcpHint": "Tool access is configured under API keys — expand a key and pick MCP tool access. Tools you were not granted never appear in the client's list.",
+      "mcpMethods": {
+        "claudeCode": "Claude Code",
+        "json": "JSON config",
+        "opencode": "opencode"
+      }
     },
     "models": {
       "empty": "No models are available",
@@ -275,7 +298,8 @@
       "totalLatency": "Total latency",
       "outputTokens": "Output tokens",
       "testRunning": "Testing… this takes a few seconds.",
-      "exposeModels": "Expose"
+      "exposeModels": "Expose",
+      "tabMcp": "MCP"
     },
     "health": {
       "healthy": "Healthy",
@@ -283,6 +307,51 @@
       "dead": "Dead",
       "disabled": "Disabled",
       "unknown": "Unknown"
+    },
+    "mcp": {
+      "title": "MCP servers",
+      "description": "Upstream MCP servers gproxy aggregates. Each key is granted servers and tool patterns separately; connect clients to /mcp with a key.",
+      "addServer": "Add MCP server",
+      "editServer": "Edit MCP server",
+      "deleteServer": "Delete MCP server",
+      "deleteServerBody": "Delete {{name}}? Every key's grants on it are removed too.",
+      "name": "Name",
+      "url": "URL",
+      "authKind": "Authentication",
+      "authBearer": "Bearer token",
+      "authHeader": "Custom header",
+      "authNone": "None",
+      "headerName": "Header name",
+      "token": "Token",
+      "tokenKeep": "Leave blank to keep the stored token",
+      "discover": "Discover tools",
+      "discovered": "{{name}}: {{count}} tools discovered.",
+      "toolsCount": "{{count}} tools",
+      "fetchedAt": "Discovered {{time}}",
+      "neverFetched": "No discovery yet",
+      "empty": "No MCP servers yet.",
+      "loadError": "Could not load MCP servers.",
+      "showTools": "Toggle tools of {{name}}",
+      "noTools": "No tools discovered yet — run Discover."
+    },
+    "activity": {
+      "title": "Live activity",
+      "refresh": "refreshes every {{seconds}}s",
+      "inFlight": "In flight",
+      "requestsPerMinute": "Requests / min",
+      "tokensPerMinute": "Tokens / min",
+      "activeSessions": "Active keys",
+      "sessionsTitle": "Active keys",
+      "sessionsEmpty": "No traffic in the last 5 minutes.",
+      "modelsTitle": "Models in use",
+      "modelsEmpty": "No models used in the last 5 minutes.",
+      "sessionRequests": "{{count}} requests",
+      "loadError": "Could not load live activity.",
+      "requestsTitle": "Activity requests",
+      "requestsEmpty": "No recent requests.",
+      "elapsedSeconds": "{{count}}s",
+      "sessionSpeed": "{{speed}} tok/s",
+      "finishedMeta": "{{latency}}ms · {{tokens}} tokens"
     }
   }
 }

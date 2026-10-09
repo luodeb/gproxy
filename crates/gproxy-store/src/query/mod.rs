@@ -8,6 +8,7 @@ pub(crate) use common::{count_all, delete_by_id};
 pub(crate) use ownership::{cascade, delete_owned, orphan_sweep};
 pub(crate) mod control;
 pub(crate) mod identity;
+pub(crate) mod mcp;
 pub(crate) mod oauth;
 pub(crate) mod oauth_authorization;
 pub(crate) mod oauth_clients;

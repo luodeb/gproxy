@@ -1,4 +1,4 @@
-use super::{admin, control, identity, model_metadata, runtime, tokenizer};
+use super::{admin, control, identity, mcp, model_metadata, runtime, tokenizer};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i64)]
@@ -18,10 +18,12 @@ pub enum SchemaVersion {
     RouteStrategies = 9,
     QuotaSnapshots = 10,
     ExposedModelDisplay = 11,
+    /// Upstream MCP servers the gateway aggregates for end-user keys.
+    McpServers = 12,
 }
 
 impl SchemaVersion {
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 12] = [
         Self::Initial,
         Self::QuotaObservations,
         Self::ModelMetadata,
@@ -33,8 +35,9 @@ impl SchemaVersion {
         Self::RouteStrategies,
         Self::QuotaSnapshots,
         Self::ExposedModelDisplay,
+        Self::McpServers,
     ];
-    pub const LATEST: Self = Self::ExposedModelDisplay;
+    pub const LATEST: Self = Self::McpServers;
 
     pub const fn number(self) -> i64 {
         self as i64
@@ -188,6 +191,7 @@ pub fn tables() -> impl Iterator<Item = &'static TableSpec> {
         .iter()
         .chain(model_metadata::TABLES)
         .chain(identity::TABLES)
+        .chain(mcp::TABLES)
         .chain(runtime::tables())
         .chain(tokenizer::TABLES)
         .chain(admin::TABLES)

@@ -100,6 +100,7 @@ impl App {
                 core,
                 host,
                 invalidation_version: std::sync::atomic::AtomicI64::new(invalidation_version),
+                in_flight: std::sync::Mutex::new(std::collections::HashMap::new()),
                 shutdown,
                 #[cfg(not(target_arch = "wasm32"))]
                 runtime_updates,

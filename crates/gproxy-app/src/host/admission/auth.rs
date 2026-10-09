@@ -172,6 +172,47 @@ fn group_permitted(
     allowed
 }
 
+/// Whether this caller may reach one MCP server, and one tool on it.
+///
+/// MCP grants are the same shape as model grants — `user_key` rows keyed by
+/// `provider_id` with a pattern in `model_pattern` — but they live in their own
+/// `operation_group` so neither surface can widen the other. `None` asks about
+/// the server itself (a listing); `Some` asks about one tool name.
+///
+/// Deny-by-default, and deliberately without the account fallback models have:
+/// a key with no `mcp` rows reaches no tools at all.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn mcp_permitted(
+    snapshot: &gproxy_store::records::ControlSnapshot,
+    identity: &CallerIdentity,
+    server_id: i64,
+    tool: Option<&str>,
+) -> bool {
+    let key_based = identity.user_key_id > 0;
+    let applicable = snapshot.permissions.iter().filter(|permission| {
+        let subject_ok = if key_based {
+            permission.subject_kind == "user_key" && permission.subject_id == identity.user_key_id
+        } else {
+            subject_matches(&permission.subject_kind, permission.subject_id, identity)
+        };
+        subject_ok
+            && permission.provider_id == Some(server_id)
+            && permission.operation_group.as_deref() == Some("mcp")
+            && permission
+                .model_pattern
+                .as_deref()
+                .is_none_or(|pattern| tool.is_none_or(|tool| crate::model_pattern::matches(pattern, tool)))
+    });
+    let mut allowed = false;
+    for permission in applicable {
+        if !permission.allowed {
+            return false;
+        }
+        allowed = true;
+    }
+    allowed
+}
+
 pub(super) fn subject_matches(kind: &str, id: i64, identity: &CallerIdentity) -> bool {
     match kind {
         "user_key" => id == identity.user_key_id,

@@ -249,7 +249,7 @@ async fn available(state: &impl State, identity: &PortalIdentity) -> Vec<String>
         .collect()
 }
 
-async fn ensure_key(
+pub(super) async fn ensure_key(
     state: &impl State,
     identity: &PortalIdentity,
     id: i64,
@@ -270,7 +270,11 @@ fn key_patterns(snapshot: &gproxy_store::records::ControlSnapshot, id: i64) -> V
         .permissions
         .iter()
         .filter(|permission| {
-            permission.subject_kind == "user_key" && permission.subject_id == id && permission.allowed
+            permission.subject_kind == "user_key"
+                && permission.subject_id == id
+                && permission.allowed
+                // MCP grants share this table; they are not model names.
+                && permission.operation_group.is_none()
         })
         .filter_map(|permission| permission.model_pattern.clone())
         .collect()

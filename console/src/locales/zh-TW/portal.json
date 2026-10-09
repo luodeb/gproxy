@@ -53,12 +53,12 @@
       "delete": "刪除",
       "saved": "已儲存。",
       "deleted": "已刪除。",
-      "close": "關閉"
+      "close": "關閉",
+      "loading": "載入中…",
+      "disabled": "已停用"
     },
     "account": {
-      "logout": "登出",
-      "settings": "設定",
-      "openMenu": "帳戶選單"
+      "logout": "登出"
     },
     "login": {
       "description": "使用管理員建立的使用者帳戶登入。"
@@ -81,11 +81,24 @@
       "copyError": "無法複製金鑰，請選取後手動複製。",
       "remask": "隱藏金鑰",
       "masked": "{{prefix}}••••••••••••",
-      "models": "模型存取",
       "modelsTitle": "模型存取",
       "modelsHint": "勾選此金鑰可呼叫的模型；不勾選=繼承帳戶權限。",
       "modelsError": "無法載入模型。",
-      "modelsEmpty": "尚無可用模型。"
+      "modelsEmpty": "尚無可用模型。",
+      "columnLabel": "金鑰",
+      "columnActions": "操作",
+      "mcpTitle": "MCP 工具權限",
+      "mcpHint": "勾選此金鑰可呼叫的伺服器，並列出每個伺服器上允許的工具名稱模式。全部不勾選表示此金鑰無法呼叫任何 MCP 工具——上方的模型權限可回退到帳號，MCP 不行。",
+      "mcpError": "無法載入此金鑰的 MCP 權限。",
+      "mcpEmpty": "尚未註冊任何 MCP 伺服器。",
+      "mcpToolCount": "{{count}} 個工具",
+      "mcpAddPattern": "新增模式",
+      "mcpRemove": "移除",
+      "mcpRemovePattern": "移除模式 {{pattern}}",
+      "mcpPatternLabel": "{{server}} 的工具模式",
+      "mcpPatternPlaceholder": "例如 web_* —— * 表示全部工具",
+      "mcpPatternHint": "模式比對工具本身的名稱；* 表示該伺服器的全部工具。",
+      "mcpServerDisabled": "已停用"
     },
     "password": {
       "title": "密碼",
@@ -120,7 +133,17 @@
         "codex": "Codex CLI",
         "claudeCode": "Claude Code"
       },
-      "modelsLoadError": "無法載入模型，請重試。"
+      "modelsLoadError": "無法載入模型，請重試。",
+      "mcpTitle": "MCP 接入",
+      "mcpDescription": "同一把 API 金鑰也可以連接閘道的 MCP 端點：用戶端只連這一個位址，看到的正好是這把金鑰被授權的工具。",
+      "mcpEndpoint": "MCP 端點",
+      "mcpCopyEndpoint": "複製端點",
+      "mcpHint": "工具權限在「API 金鑰」裡設定——展開金鑰後勾選 MCP 工具權限。沒有授權的工具不會出現在用戶端清單中。",
+      "mcpMethods": {
+        "claudeCode": "Claude Code",
+        "json": "JSON 設定",
+        "opencode": "opencode"
+      }
     },
     "models": {
       "empty": "沒有可用模型",
@@ -275,7 +298,8 @@
       "totalLatency": "總耗時",
       "outputTokens": "輸出 token",
       "testRunning": "測速中…（約幾秒）",
-      "exposeModels": "對外"
+      "exposeModels": "對外",
+      "tabMcp": "MCP"
     },
     "health": {
       "healthy": "健康",
@@ -283,6 +307,51 @@
       "dead": "失效",
       "disabled": "已停用",
       "unknown": "未知"
+    },
+    "mcp": {
+      "title": "MCP 伺服器",
+      "description": "gproxy 聚合的上游 MCP 伺服器。每把金鑰分別授權伺服器與工具模式；用戶端以金鑰連線 /mcp 即可使用。",
+      "addServer": "新增 MCP 伺服器",
+      "editServer": "編輯 MCP 伺服器",
+      "deleteServer": "刪除 MCP 伺服器",
+      "deleteServerBody": "刪除 {{name}}？所有金鑰對它的授權也會一併移除。",
+      "name": "名稱",
+      "url": "URL",
+      "authKind": "認證方式",
+      "authBearer": "Bearer 權杖",
+      "authHeader": "自訂標頭",
+      "authNone": "無",
+      "headerName": "標頭名稱",
+      "token": "權杖",
+      "tokenKeep": "留空則保留已儲存的權杖",
+      "discover": "探索工具",
+      "discovered": "{{name}}：探索到 {{count}} 個工具。",
+      "toolsCount": "{{count}} 個工具",
+      "fetchedAt": "探索於 {{time}}",
+      "neverFetched": "尚未探索",
+      "empty": "尚無 MCP 伺服器。",
+      "loadError": "無法載入 MCP 伺服器。",
+      "showTools": "展開/收起 {{name}} 的工具",
+      "noTools": "尚未探索到工具——點「探索工具」拉取。"
+    },
+    "activity": {
+      "title": "即時活動",
+      "refresh": "每 {{seconds}} 秒重新整理",
+      "inFlight": "進行中請求",
+      "requestsPerMinute": "請求 / 分鐘",
+      "tokensPerMinute": "Tokens / 分鐘",
+      "activeSessions": "活躍金鑰",
+      "sessionsTitle": "活躍金鑰",
+      "sessionsEmpty": "最近 5 分鐘沒有流量。",
+      "modelsTitle": "使用中的模型",
+      "modelsEmpty": "最近 5 分鐘沒有使用模型。",
+      "sessionRequests": "{{count}} 次請求",
+      "loadError": "無法載入即時活動。",
+      "requestsTitle": "活動請求",
+      "requestsEmpty": "最近沒有請求。",
+      "elapsedSeconds": "{{count}} 秒",
+      "sessionSpeed": "{{speed}} tok/s",
+      "finishedMeta": "{{latency}}ms · {{tokens}} tokens"
     }
   }
 }

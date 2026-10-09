@@ -38,6 +38,7 @@ fn parse(row: Row) -> Result<RecentUsageRecord, StoreError> {
         request_id: row.text("request_id")?.to_owned(),
         at: row.i64("at")?,
         provider_id: row.i64("provider_id")?,
+        user_key_id: row.optional_i64("user_key_id")?,
         operation: row.optional_text("operation")?.map(str::to_owned),
         upstream_model: row.text("upstream_model")?.to_owned(),
         input_tokens: super::usage::unsigned(row.i64("input_tokens")?, "input_tokens")?,

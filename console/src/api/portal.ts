@@ -10,6 +10,12 @@ import type { PortalModelDto } from "@/generated/PortalModelDto"
 import type { PortalRecentQueryDto } from "@/generated/PortalRecentQueryDto"
 import type { PortalRecentRequestDto } from "@/generated/PortalRecentRequestDto"
 import type { UserKeyCreateResponse } from "@/generated/UserKeyCreateResponse"
+import type { PortalMcpServerDto } from "@/generated/PortalMcpServerDto"
+import type { PortalMcpServerWriteRequest } from "@/generated/PortalMcpServerWriteRequest"
+import type { PortalMcpDiscoverResponse } from "@/generated/PortalMcpDiscoverResponse"
+import type { PortalKeyMcpDto } from "@/generated/PortalKeyMcpDto"
+import type { PortalKeyMcpGrantDto } from "@/generated/PortalKeyMcpGrantDto"
+import type { PortalActivityDto } from "@/generated/PortalActivityDto"
 import type { UserKeyDto } from "@/generated/UserKeyDto"
 import { ApiError, json } from "@/api/client"
 
@@ -57,6 +63,8 @@ export type PortalUsagePointDto = {
 
 export type PortalUsageModelDto = {
   model: string
+  /** The upstream that served it — same-named models on different providers stay apart. */
+  provider: string | null
   requests: number
   input_tokens: number
   output_tokens: number
@@ -116,3 +124,31 @@ export const deletePortalKey = (id: number) =>
 
 export const revealPortalKey = (id: number) =>
   portalApi<UserKeyRevealResponse>(`/portal/api/keys/${id}/reveal`, undefined, json("POST", {}))
+
+/** The MCP servers the operator registered, with their last discovered tools. */
+export const portalMcpServers = (signal?: AbortSignal) =>
+  portalApi<Array<PortalMcpServerDto>>("/portal/api/mcp-servers", signal)
+
+export const createPortalMcpServer = (value: PortalMcpServerWriteRequest) =>
+  portalApi<PortalMcpServerDto>("/portal/api/mcp-servers", undefined, json("POST", value))
+
+export const updatePortalMcpServer = (id: number, value: PortalMcpServerWriteRequest) =>
+  portalApi<{ id: number }>(`/portal/api/mcp-servers/${id}`, undefined, json("PATCH", value))
+
+export const deletePortalMcpServer = (id: number) =>
+  portalApi<void>(`/portal/api/mcp-servers/${id}`, undefined, { method: "DELETE" })
+
+/** Ask the server what it serves; a failed pull still answers `ok: false`. */
+export const discoverPortalMcpServer = (id: number) =>
+  portalApi<PortalMcpDiscoverResponse>(`/portal/api/mcp-servers/${id}/discover`, undefined, json("POST", {}))
+
+/** The MCP tools one key may call. Empty `allowed` means none — no fallback. */
+export const portalKeyMcp = (id: number, signal?: AbortSignal) =>
+  portalApi<PortalKeyMcpDto>(`/portal/api/keys/${id}/mcp`, signal)
+
+export const setPortalKeyMcp = (id: number, grants: Array<PortalKeyMcpGrantDto>) =>
+  portalApi<PortalKeyMcpDto>(`/portal/api/keys/${id}/mcp`, undefined, json("PUT", { grants }))
+
+/** Live activity: what this account's keys are doing right now. */
+export const portalActivity = (signal?: AbortSignal) =>
+  portalApi<PortalActivityDto>("/portal/api/activity", signal)

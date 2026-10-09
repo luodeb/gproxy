@@ -117,3 +117,36 @@ function snippets(values: Values, key: string): Array<Omit<ConnectionSnippet, "c
     },
   ]
 }
+
+export type McpMethod = "claudeCode" | "json" | "opencode"
+
+/// How a client connects to the gateway's MCP endpoint. One URL, the same API
+/// key as the model API — what it sees is what that key was granted.
+export function mcpSnippets(values: { origin: string; key: string }): Array<{ method: McpMethod; display: string; copy: string }> {
+  const endpoint = `${values.origin}/mcp`
+  const display = snippetsFor(endpoint, values.key)
+  const copy = snippetsFor(endpoint, values.key)
+  return display.map((snippet, index) => ({ ...snippet, copy: copy[index].display }))
+}
+
+function snippetsFor(endpoint: string, key: string): Array<{ method: McpMethod; display: string }> {
+  const server = {
+    type: "http",
+    url: endpoint,
+    headers: { Authorization: `Bearer ${key}` },
+  }
+  return [
+    {
+      method: "claudeCode",
+      display: `claude mcp add --transport http gproxy ${shellString(endpoint)} --header ${shellString(`Authorization: Bearer ${key}`)}`,
+    },
+    {
+      method: "json",
+      display: JSON.stringify({ mcpServers: { gproxy: server } }, null, 2),
+    },
+    {
+      method: "opencode",
+      display: JSON.stringify({ mcp: { gproxy: { ...server, type: "remote" } } }, null, 2),
+    },
+  ]
+}

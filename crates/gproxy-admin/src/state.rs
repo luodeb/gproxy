@@ -8,6 +8,15 @@ use crate::dto::{
 };
 use crate::{AdminError, PortalIdentity};
 
+/// One in-flight request, as the activity panel shows it.
+#[derive(Debug, Clone)]
+pub struct ActivityRequest {
+    pub request_id: String,
+    pub user_key_id: Option<i64>,
+    pub model: Option<String>,
+    pub started_at_ms: i64,
+}
+
 pub trait State: MaybeSend + MaybeSync {
     fn store(&self) -> &gproxy_store::Store;
 
@@ -111,6 +120,26 @@ pub trait State: MaybeSend + MaybeSync {
         actor_user_id: i64,
         request: &'a ModelDiscoverRequest,
     ) -> BoxFuture<'a, Result<ModelDiscoverResponse, AdminError>>;
+
+    /// Gateway requests in flight, for the live-activity panel.
+    fn in_flight(&self) -> u64 {
+        0
+    }
+
+    /// The in-flight requests themselves: id, key, model, when admitted.
+    fn in_flight_requests(&self) -> Vec<ActivityRequest> {
+        Vec::new()
+    }
+
+    /// Ask one upstream MCP server for its tool list and cache the names.
+    /// Defaults to forbidden: only a state that owns an MCP client can answer.
+    fn discover_mcp_tools<'a>(
+        &'a self,
+        _actor_user_id: i64,
+        _server_id: i64,
+    ) -> BoxFuture<'a, Result<crate::dto::PortalMcpDiscoverResponse, AdminError>> {
+        Box::pin(async { Err(AdminError::Forbidden) })
+    }
 
     fn fetch_tokenizer_vocab<'a>(
         &'a self,

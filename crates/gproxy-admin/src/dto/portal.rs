@@ -149,6 +149,9 @@ pub struct PortalUsagePointDto {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct PortalUsageModelDto {
     pub model: String,
+    /// Which upstream served it: the same public model can fan out across
+    /// providers, and their usage is not the same usage.
+    pub provider: Option<String>,
     pub requests: u64,
     pub input_tokens: u64,
     pub output_tokens: u64,
@@ -225,4 +228,144 @@ pub struct PortalRecentRequestDto {
     pub usage_source: String,
     pub ended: String,
     pub latency_ms: u64,
+}
+
+/// One registered upstream MCP server, as the portal lists it. `tools` is the
+/// last discovered catalogue; `tools_fetched_at` lets the UI show its age.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalMcpServerDto {
+    pub id: i64,
+    pub name: String,
+    pub url: String,
+    pub auth_kind: String,
+    pub auth_header_name: Option<String>,
+    pub enabled: bool,
+    pub tools: Vec<String>,
+    pub tools_fetched_at: Option<i64>,
+}
+
+/// `token` is write-only: the portal never reads a credential back, so an
+/// update that leaves it `None` keeps the stored one.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct PortalMcpServerWriteRequest {
+    pub name: String,
+    pub url: String,
+    pub auth_kind: String,
+    pub auth_header_name: Option<String>,
+    pub token: Option<String>,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalMcpDiscoverResponse {
+    pub ok: bool,
+    pub tools: Vec<String>,
+    pub message: Option<String>,
+}
+
+/// One server as the grant editor sees it. Disabled servers are listed too:
+/// a key may still hold a grant on one, and hiding it would silently drop that
+/// grant on the next save.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalMcpServerToolsDto {
+    pub name: String,
+    pub enabled: bool,
+    pub tools: Vec<String>,
+}
+
+/// One server's grant: the tool-name patterns this key may call. `*` allows
+/// every tool the server advertises.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalKeyMcpGrantDto {
+    pub server: String,
+    pub patterns: Vec<String>,
+}
+
+/// Which MCP tools one API key may call. Unlike models there is no account
+/// fallback: an empty `allowed` means this key reaches no MCP tools at all.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalKeyMcpDto {
+    pub available: Vec<PortalMcpServerToolsDto>,
+    pub allowed: Vec<PortalKeyMcpGrantDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct PortalKeyMcpRequest {
+    pub grants: Vec<PortalKeyMcpGrantDto>,
+}
+
+/// A live snapshot of what this account's keys are doing right now.
+///
+/// Everything is scoped to the asking user and a short window (five minutes):
+/// "active" means traffic in that window, and `in_flight` is the requests
+/// moving through the gateway at the instant of the call.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+pub struct PortalActivityDto {
+    pub now: i64,
+    pub in_flight: u64,
+    pub window_seconds: i64,
+    pub last_minute_requests: u64,
+    pub last_minute_tokens: u64,
+    pub requests: Vec<PortalActivityRequestDto>,
+    /// Just-finished requests, newest first — so the list still reads as
+    /// activity between polls, when nothing happens to be in flight.
+    pub recent: Vec<PortalActivityRecentDto>,
+    pub sessions: Vec<PortalActivitySessionDto>,
+    pub models: Vec<PortalActivityModelDto>,
+}
+
+/// One request that finished recently: what ran, on which key, how long it took.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+pub struct PortalActivityRecentDto {
+    pub request_id: String,
+    pub key_id: i64,
+    pub prefix: Option<String>,
+    pub label: Option<String>,
+    pub model: String,
+    pub provider: Option<String>,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub at: i64,
+    pub latency_ms: u64,
+}
+
+/// One request moving through the gateway right now.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalActivityRequestDto {
+    pub request_id: String,
+    pub key_id: i64,
+    pub prefix: Option<String>,
+    pub label: Option<String>,
+    pub model: Option<String>,
+    /// When the gateway admitted it, epoch milliseconds.
+    pub started_at: i64,
+}
+
+/// One API key with traffic in the window — the portal's notion of an
+/// "active session": a client that is talking, which models it uses, and when
+/// it was last seen.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+pub struct PortalActivitySessionDto {
+    pub key_id: i64,
+    pub prefix: Option<String>,
+    pub label: Option<String>,
+    pub requests: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub last_at: i64,
+    pub models: Vec<String>,
+    /// Rough throughput: the key's tokens over the last minute, divided by 60.
+    pub tokens_per_second: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalActivityModelDto {
+    pub model: String,
+    pub provider: Option<String>,
+    pub requests: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub last_at: i64,
 }

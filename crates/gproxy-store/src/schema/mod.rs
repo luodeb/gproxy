@@ -3,6 +3,7 @@ mod build;
 mod catalog;
 mod control;
 mod identity;
+mod mcp;
 mod model_metadata;
 mod nullable;
 mod oauth;

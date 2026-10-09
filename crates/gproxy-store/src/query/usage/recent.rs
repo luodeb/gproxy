@@ -7,6 +7,7 @@ const COLUMNS: &[&str] = &[
     "request_id",
     "at",
     "provider_id",
+    "user_key_id",
     "operation",
     "upstream_model",
     "input_tokens",

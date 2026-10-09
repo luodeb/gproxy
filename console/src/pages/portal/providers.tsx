@@ -17,6 +17,7 @@ import { ModelDialog } from "@/components/portal/providers/model-dialog"
 import { SourceDialog } from "@/components/portal/providers/source-dialog"
 import { DiscoverDialog } from "@/components/portal/providers/discover-dialog"
 import { ModelTestDialog } from "@/components/portal/providers/model-test-dialog"
+import { McpServers } from "@/components/portal/mcp-servers"
 import type { NewModelSource } from "@/components/portal/providers/model-dialog"
 
 type Editor =
@@ -43,7 +44,7 @@ function editorKey(editor: Editor): string {
 export function PortalProvidersPage() {
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const [tab, setTab] = useState<"providers" | "models">("providers")
+  const [tab, setTab] = useState<"providers" | "models" | "mcp">("providers")
   const [search, setSearch] = useState("")
   const [editor, setEditor] = useState<Editor>(null)
   const [testTarget, setTestTarget] = useState<{ provider: ProviderDto; model: ProviderModelDto } | null>(null)
@@ -172,18 +173,26 @@ export function PortalProvidersPage() {
         <div className="flex gap-2">
           <Button variant={tab === "providers" ? "secondary" : "ghost"} onClick={() => setTab("providers")}>{t("portal.providers.tabProviders")}</Button>
           <Button variant={tab === "models" ? "secondary" : "ghost"} onClick={() => setTab("models")}>{t("portal.providers.tabModels")}</Button>
+          <Button variant={tab === "mcp" ? "secondary" : "ghost"} onClick={() => setTab("mcp")}>{t("portal.providers.tabMcp")}</Button>
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input className="pl-8" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("portal.providers.search")} />
-          </div>
-          {tab === "providers"
-            ? <Button onClick={() => setEditor({ kind: "provider", provider: null })}><PlusIcon aria-hidden />{t("portal.providers.addProvider")}</Button>
-            : <Button onClick={() => setEditor({ kind: "model", model: null })}><PlusIcon aria-hidden />{t("portal.providers.addModel")}</Button>}
+          {tab === "mcp" ? null : (
+            <div className="relative">
+              <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Input className="pl-8" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("portal.providers.search")} />
+            </div>
+          )}
+          {tab === "providers" ? <Button onClick={() => setEditor({ kind: "provider", provider: null })}><PlusIcon aria-hidden />{t("portal.providers.addProvider")}</Button> : null}
+          {tab === "models" ? <Button onClick={() => setEditor({ kind: "model", model: null })}><PlusIcon aria-hidden />{t("portal.providers.addModel")}</Button> : null}
         </div>
       </div>
 
+      {tab === "mcp" ? (
+        <>
+          <h2 className="mt-4 text-lg font-medium">{t("portal.mcp.title")}</h2>
+          <McpServers />
+        </>
+      ) : (
       <QueryState loading={loading} error={errored ? t("portal.providers.loadError") : ""}>
         {tab === "providers" ? (
           <div className="mt-4 flex flex-col gap-4">
@@ -208,6 +217,7 @@ export function PortalProvidersPage() {
           </div>
         )}
       </QueryState>
+      )}
 
       {editor?.kind === "provider" ? (
         <ProviderDialog key={editorKey(editor)} open onOpenChange={(open) => { if (!open) setEditor(null) }} provider={editor.provider} channels={channels.data ?? []} pending={saveProvider.isPending} onSubmit={(value) => saveProvider.mutate({ id: editor.provider?.id ?? null, value })} />
