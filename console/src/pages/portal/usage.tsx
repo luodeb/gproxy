@@ -105,7 +105,7 @@ function UsageBody({ usage, metric, onMetric }: { usage: PortalUsageOverviewDto;
         <CardContent>
           {usage.models.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">{t("portal.usage.noData")}</p> : (
             <div className="flex flex-col gap-3">
-              {usage.models.map((model) => <ModelRow key={model.model} model={model} maxRequests={maxRequests} />)}
+              {usage.models.map((model) => <ModelRow key={`${model.provider ?? ""}/${model.model}`} model={model} maxRequests={maxRequests} />)}
             </div>
           )}
         </CardContent>
@@ -119,7 +119,10 @@ function ModelRow({ model, maxRequests }: { model: PortalUsageModelDto; maxReque
   return (
     <div className="flex flex-col gap-1">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
-        <span className="min-w-0 truncate font-mono text-xs">{model.model}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="min-w-0 truncate font-mono text-xs">{model.model}</span>
+          {model.provider ? <span className="shrink-0 truncate text-xs text-muted-foreground">{model.provider}</span> : null}
+        </span>
         <span className="flex items-center gap-4 text-xs text-muted-foreground">
           <span>{formatCount(model.requests, i18n.language)} {t("portal.usage.requests")}</span>
           <span>{formatCount(model.input_tokens + model.output_tokens, i18n.language)} {t("portal.usage.tokens")}</span>
