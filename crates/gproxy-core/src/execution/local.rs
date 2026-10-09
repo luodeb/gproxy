@@ -78,7 +78,9 @@ async fn serve<H: Host>(
             models.sort_by(|left, right| left.id.cmp(&right.id));
             models.dedup_by(|left, right| left.id == right.id);
             models.retain(|model| {
-                control.catalogue_visible(identity, Some(&model.id), &request.mode)
+                // Operator pulls bypass key allow-lists, as in admission.
+                request.force_model_refresh
+                    || control.catalogue_visible(identity, Some(&model.id), &request.mode)
             });
             (
                 StatusCode::OK,
@@ -103,11 +105,13 @@ async fn serve<H: Host>(
                 .as_ref()
                 .and_then(|id| models.into_iter().find(|model| &model.id == id))
                 .filter(|_| {
-                    control.catalogue_visible(
-                        identity,
-                        classified.requested_model.as_deref(),
-                        &request.mode,
-                    )
+                    // Operator pulls bypass key allow-lists, as in admission.
+                    request.force_model_refresh
+                        || control.catalogue_visible(
+                            identity,
+                            classified.requested_model.as_deref(),
+                            &request.mode,
+                        )
                 });
             match found {
                 Some(model) => (

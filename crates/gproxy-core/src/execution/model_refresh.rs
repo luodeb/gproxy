@@ -34,7 +34,10 @@ pub(super) async fn run<H: Host>(
                 provider: provider.clone(),
             };
             async move {
-                if !control.catalogue_visible(identity, None, &request.mode) {
+                // Operator pulls (discovery, speed test) are exempt from key
+                // allow-lists, as in admission: the provider was already chosen
+                // by the operator, not narrowed by the key they happen to hold.
+                if !request.force_model_refresh && !control.catalogue_visible(identity, None, &request.mode) {
                     return None;
                 }
                 let classified = super::request::classify(&request).ok()?;
