@@ -353,7 +353,8 @@
       "online": "線上",
       "offline": "離線",
       "sessionSpeed": "{{speed}} tok/s",
-      "sessionSummary": "{{requests}} 次請求 · {{tokens}} tokens"
+      "sessionSummary": "{{requests}} 次請求 · {{tokens}} tokens",
+      "inFlightOnSession": "{{count}} 個進行中"
     }
   }
 }

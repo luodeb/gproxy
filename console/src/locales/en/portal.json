@@ -353,7 +353,8 @@
       "online": "online",
       "offline": "offline",
       "sessionSpeed": "{{speed}} tok/s",
-      "sessionSummary": "{{requests}} requests · {{tokens}} tokens"
+      "sessionSummary": "{{requests}} requests · {{tokens}} tokens",
+      "inFlightOnSession": "{{count}} in flight"
     }
   }
 }

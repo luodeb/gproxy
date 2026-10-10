@@ -182,6 +182,64 @@
   );
 }
 
+/* 概览实时面板的动效基建。全部走 CSS 动画，prefers-reduced-motion 的
+   全局覆盖会自动把它们压到 0.01ms。 */
+@keyframes activity-eq {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.activity-eq-bar {
+  height: 100%;
+  transform-origin: bottom;
+  animation: activity-eq 900ms ease-in-out infinite;
+}
+@keyframes activity-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.activity-row {
+  transition:
+    opacity 320ms ease,
+    transform 320ms ease;
+  animation: activity-row-in 240ms ease-out;
+}
+.activity-row-out {
+  opacity: 0;
+  transform: translateY(2px);
+}
+@keyframes activity-scan {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.activity-scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in oklch, var(--state-healthy) 12%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: activity-scan 2.2s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

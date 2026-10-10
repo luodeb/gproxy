@@ -353,7 +353,8 @@
       "online": "在线",
       "offline": "离线",
       "sessionSpeed": "{{speed}} tok/s",
-      "sessionSummary": "{{requests}} 次请求 · {{tokens}} tokens"
+      "sessionSummary": "{{requests}} 次请求 · {{tokens}} tokens",
+      "inFlightOnSession": "{{count}} 个进行中"
     }
   }
 }
