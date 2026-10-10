@@ -1,7 +1,9 @@
 import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { ChevronDownIcon, ChevronRightIcon, EyeIcon, GaugeIcon, KeyRoundIcon, PencilIcon, PlusIcon, RotateCcwIcon, SearchIcon } from "lucide-react"
 import type { ChannelDto, CredentialDto, ProviderDto, ProviderModelDto } from "@/api/control"
+import { providerProtocol, setProviderProtocol } from "@/api/control"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -64,6 +66,7 @@ export function ProviderCard({ provider, channel, credentials, models, actions }
       </CardHeader>
       {open ? (
         <CardContent className="flex flex-col gap-6">
+          <ProtocolSection providerId={provider.id} />
           <section className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium">{t("portal.providers.keys")}</h3>
@@ -124,6 +127,40 @@ export function ProviderCard({ provider, channel, credentials, models, actions }
         </CardContent>
       ) : null}
     </Card>
+  )
+}
+
+/// Per-provider Responses handling: passthrough to upstreams that serve
+/// `/v1/responses` themselves, or translate to Chat for the many
+/// OpenAI-compatible upstreams that do not (Zhipu's coding endpoint among
+/// them) — the case that otherwise fails upstream with a bare 404.
+function ProtocolSection({ providerId }: { providerId: number }) {
+  const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const protocol = useQuery({
+    queryKey: ["portal", "provider-protocol", providerId],
+    queryFn: ({ signal }) => providerProtocol(providerId, signal),
+  })
+  const save = useMutation({
+    mutationFn: (translate: boolean) => setProviderProtocol(providerId, translate),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["portal", "provider-protocol", providerId] }),
+  })
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="text-sm font-medium">{t("portal.providers.protocolTitle")}</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="text-sm">{t("portal.providers.translateLabel")}</span>
+          <span className="text-xs text-muted-foreground">{t("portal.providers.translateHint")}</span>
+        </span>
+        <Switch
+          checked={protocol.data?.translate_responses ?? false}
+          disabled={protocol.isLoading || save.isPending}
+          onChange={(next) => save.mutate(next)}
+          label={t("portal.providers.translateLabel")}
+        />
+      </div>
+    </section>
   )
 }
 

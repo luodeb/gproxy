@@ -5,6 +5,7 @@ mod mcp;
 mod keys;
 mod models;
 mod oauth_sessions;
+mod protocol;
 mod recent;
 mod usage;
 
@@ -90,6 +91,17 @@ pub async fn dispatch(state: &impl State, parts: &Parts, body: Bytes) -> Option<
             return match parts.method {
                 Method::GET => mcp::key_mcp(state, &identity, id).await,
                 Method::PUT => mcp::set_key_mcp(state, &identity, parts, id, &body).await,
+                _ => Err(AdminError::NotFound),
+            };
+        }
+        if let Some(id) = path
+            .strip_prefix("/portal/api/providers/")
+            .and_then(|value| value.strip_suffix("/protocol"))
+            .and_then(|value| value.parse::<i64>().ok())
+        {
+            return match parts.method {
+                Method::GET => protocol::get(state, id).await,
+                Method::PUT => protocol::set(state, parts, id, &body).await,
                 _ => Err(AdminError::NotFound),
             };
         }

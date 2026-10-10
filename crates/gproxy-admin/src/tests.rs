@@ -16,6 +16,7 @@ mod default_prices;
 mod helpers;
 mod observability;
 mod portal_keys;
+mod portal_protocol;
 
 use helpers::*;
 

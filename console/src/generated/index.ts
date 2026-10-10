@@ -28,6 +28,8 @@ export * from "./PortalMcpServerWriteRequest";
 export * from "./PortalModelCapabilityDto";
 export * from "./PortalModelDto";
 export * from "./PortalPasswordChangeRequest";
+export * from "./PortalProviderProtocolDto";
+export * from "./PortalProviderProtocolRequest";
 export * from "./PortalQuotaScopeDto";
 export * from "./PortalQuotaWindowDto";
 export * from "./PortalQuotaWindowKindDto";

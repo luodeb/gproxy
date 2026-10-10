@@ -299,7 +299,10 @@
       "outputTokens": "输出 token",
       "testRunning": "测速中…（约几秒）",
       "exposeModels": "对外",
-      "tabMcp": "MCP"
+      "tabMcp": "MCP",
+      "protocolTitle": "协议",
+      "translateLabel": "将 Responses 请求转换为 Chat",
+      "translateHint": "上游不支持 OpenAI Responses 协议时开启（如智谱编码端点）；开启后 Codex 等 Responses 客户端经由转换正常使用。"
     },
     "health": {
       "healthy": "健康",

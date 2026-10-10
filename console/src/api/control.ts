@@ -199,6 +199,15 @@ export const updateProvider = (id: number, value: ProviderWriteRequest) => api<P
 export const deleteProvider = (id: number) => api<void>(`/portal/api/providers/${id}`, undefined, { method: "DELETE" })
 export const discoverProviderModels = (id: number, signal?: AbortSignal) => api<ModelDiscoverResponse>(`/portal/api/providers/${id}/discover`, signal, json("POST", {}))
 
+/** Per-provider wire-protocol handling for the OpenAI Responses API. */
+export type ProviderProtocolDto = { translate_responses: boolean }
+
+export const providerProtocol = (id: number, signal?: AbortSignal) =>
+  api<ProviderProtocolDto>(`/portal/api/providers/${id}/protocol`, signal)
+
+export const setProviderProtocol = (id: number, translate_responses: boolean) =>
+  api<ProviderProtocolDto>(`/portal/api/providers/${id}/protocol`, undefined, json("PUT", { translate_responses }))
+
 export type ModelTestResult = {
   ok: boolean
   status: number

@@ -7,6 +7,7 @@
  */
 export type PortalActivitySessionDto = { key_id: number, prefix: string | null, label: string | null, requests: number, input_tokens: number, output_tokens: number, last_at: number, models: Array<string>, 
 /**
- * Rough throughput: the key's tokens over the last minute, divided by 60.
+ * Generated-token throughput: the key's output tokens over the last
+ * minute, divided by 60. Zero when the key wrote nothing recently.
  */
 tokens_per_second: number, };

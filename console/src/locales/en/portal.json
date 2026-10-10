@@ -299,7 +299,10 @@
       "outputTokens": "Output tokens",
       "testRunning": "Testing… this takes a few seconds.",
       "exposeModels": "Expose",
-      "tabMcp": "MCP"
+      "tabMcp": "MCP",
+      "protocolTitle": "Protocol",
+      "translateLabel": "Translate Responses to Chat",
+      "translateHint": "Enable for upstreams without the OpenAI Responses API (e.g. Zhipu's coding endpoint) — Responses clients then work via conversion."
     },
     "health": {
       "healthy": "Healthy",

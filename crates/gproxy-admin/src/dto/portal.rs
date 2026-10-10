@@ -370,3 +370,22 @@ pub struct PortalActivityModelDto {
     pub output_tokens: u64,
     pub last_at: i64,
 }
+
+/// Per-provider wire-protocol handling for the OpenAI Responses API.
+///
+/// `translate_responses = true` installs routing rules that convert incoming
+/// `/v1/responses` requests to Chat Completions upstream (and the reply back),
+/// for providers whose endpoint does not implement Responses natively —
+/// most OpenAI-compatible gateways do not. `false` keeps the channel's native
+/// passthrough, which is right for upstreams that serve `/v1/responses`
+/// themselves.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalProviderProtocolDto {
+    pub translate_responses: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct PortalProviderProtocolRequest {
+    pub translate_responses: bool,
+}
