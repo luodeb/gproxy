@@ -30,10 +30,13 @@ pub(crate) fn transform_typed(
         None => {}
     }
     if let Some(instructions) = input.instructions {
+        // `developer` is the OpenAI-modern role, but every other OpenAI-compatible
+        // upstream only accepts the classic set — `system` is universally served,
+        // so the Responses `instructions` prompt rides in as system.
         messages.insert(
             0,
-            openai::ChatCompletionMessageParam::Developer(openai::ChatDeveloperMessageParam {
-                role: openai::ChatDeveloperRole::Developer,
+            openai::ChatCompletionMessageParam::System(openai::ChatSystemMessageParam {
+                role: openai::ChatSystemRole::System,
                 content: openai::ChatTextContent::Text(instructions),
                 name: None,
                 rest: Default::default(),
