@@ -39,34 +39,61 @@ pub(super) fn text_message(
     content: openai::ResponseEasyInputContent,
     role: openai::ResponseEasyInputMessageRole,
 ) -> Result<openai::ChatCompletionMessageParam, TransformError> {
-    let content = easy_text(content)?;
-    Ok(match role {
-        openai::ResponseEasyInputMessageRole::System => {
-            openai::ChatCompletionMessageParam::System(openai::ChatSystemMessageParam {
-                role: openai::ChatSystemRole::System,
-                content,
-                name: None,
-                rest: Default::default(),
-            })
+    // Developer maps to `system`, not the OpenAI-modern `developer` role: the
+    // classic set is what every OpenAI-compatible upstream accepts, and a
+    // mid-conversation developer message is semantically a system note.
+    match role {
+        openai::ResponseEasyInputMessageRole::User => return user_content(content),
+        openai::ResponseEasyInputMessageRole::System
+        | openai::ResponseEasyInputMessageRole::Developer => {
+            let content = easy_text(content)?;
+            Ok(openai::ChatCompletionMessageParam::System(
+                openai::ChatSystemMessageParam {
+                    role: openai::ChatSystemRole::System,
+                    content,
+                    name: None,
+                    rest: Default::default(),
+                },
+            ))
         }
-        openai::ResponseEasyInputMessageRole::Developer
-        | openai::ResponseEasyInputMessageRole::User
-        | openai::ResponseEasyInputMessageRole::Assistant => {
-            openai::ChatCompletionMessageParam::Developer(openai::ChatDeveloperMessageParam {
-                role: openai::ChatDeveloperRole::Developer,
-                content,
-                name: None,
-                rest: Default::default(),
-            })
+        openai::ResponseEasyInputMessageRole::Assistant => {
+            let content = easy_text(content)?;
+            let content = match content {
+                openai::ChatTextContent::Text(text) => openai::ChatAssistantContent::Text(text),
+                openai::ChatTextContent::Parts(parts) => openai::ChatAssistantContent::Text(
+                    parts
+                        .into_iter()
+                        .filter_map(|part| match part {
+                            openai::ChatTextContentPart::Text(part) => Some(part.text),
+                            _ => None,
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                ),
+                other => openai::ChatAssistantContent::Unknown(serde_json::Value::Null),
+            };
+            #[allow(unreachable_patterns)]
+            let _ = &content;
+            Ok(openai::ChatCompletionMessageParam::Assistant(crate::wire!(
+                openai::ChatAssistantMessageParam {
+                    role: openai::ChatAssistantRole::Assistant,
+                    content: Some(content),
+                    audio: None,
+                    function_call: None,
+                    name: None,
+                    reasoning_content: None,
+                    refusal: None,
+                    tool_calls: None,
+                    rest: Default::default(),
+                }
+            )))
         }
         #[cfg(not(feature = "exhaustive"))]
-        _ => {
-            return Err(crate::TransformError::unsupported(
-                "protocol enum",
-                "unrecognized external variant",
-            ));
-        }
-    })
+        _ => Err(crate::TransformError::unsupported(
+            "protocol enum",
+            "unrecognized external variant",
+        )),
+    }
 }
 
 pub(super) fn easy_text(
