@@ -72,7 +72,9 @@ BUILD.local.md         # 本地构建与部署备忘（更细的踩坑记录）
 > | 实例 | 地址 | 说明 |
 > |---|---|---|
 > | **ai**（现生产） | `https://d.debin.cc` → 阿里云 47.100.255.137 | `/opt/gproxy`（bin/data/.env），systemd `gproxy.service`（监听 127.0.0.1:58881）+ Caddy 自动 TLS；2G swap；部署脚本默认目标 |
-> | **yocto**（冻结） | `ai.debin.cc`（frp 链路） | `/home/yocto/gproxy`，docker compose；**暂停写入**，仅作回滚，勿改动 |
+> | **yocto**（已下线） | — | 容器已移除（2026-10-10），数据档案保留在 `/home/yocto/gproxy`（含 `gproxy.db.final-*` 快照）；回滚：`cd /home/yocto/gproxy/container && docker compose up -d` |
+>
+> 生产域名 `ai.debin.cc` 的 DNS 已指向 ai 本机，由 ai 上的 Caddy 直接服务（frp 链路退出）。
 >
 > 部署：`scripts/local-deploy.sh`（默认推 ai）。推 yocto 需显式覆盖：
 > `DEPLOY_HOST=yocto DEPLOY_DIR=/home/yocto/gproxy DEPLOY_RUNTIME=docker scripts/local-deploy.sh`。
