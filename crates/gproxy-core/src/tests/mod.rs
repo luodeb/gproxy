@@ -432,6 +432,82 @@ fn execute_honors_failover_budget_and_settles_only_the_final_attempt() -> Result
     Ok(())
 }
 
+/// The Bailian refusal captured from production: 403 with a scoped
+/// `AccessDenied` code. No retry, no prompt edit and no other model on the same
+/// key changes that answer, so the credential is done for that model.
+const UNPURCHASED_MODEL: &[u8] = br#"{"error":{"message":"Access to model denied. Please make sure you are eligible for using the model.","type":"AccessDenied.Unpurchased","code":"AccessDenied.Unpurchased"}}"#;
+
+#[test]
+fn an_unentitled_model_retires_the_credential_and_the_next_one_serves() -> Result<(), InitError> {
+    let host = MemoryHost::new(false);
+    {
+        let mut state = host.state.lock().expect("state lock");
+        state.credential.channel = "custom".into();
+        state.credential.kind = "api_key".into();
+        state.credential.secret = json!({"api_key": "bailian-key"});
+        state.plan = Some(Plan {
+            targets: vec![
+                custom_target(CredentialId(7)),
+                custom_target(CredentialId(8)),
+            ],
+            budget: FailoverBudget { max_attempts: 2 },
+        });
+        state.scripted.extend([
+            (
+                StatusCode::FORBIDDEN,
+                vec![Bytes::from_static(UNPURCHASED_MODEL)],
+            ),
+            (
+                StatusCode::OK,
+                vec![Bytes::from_static(
+                    br#"{"id":"chat_1","object":"chat.completion","created":0,"model":"upstream-model","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}"#,
+                )],
+            ),
+        ]);
+    }
+    let core = Core::new(
+        host.clone(),
+        gproxy_channel_api::ChannelRegistry::new([
+            Box::new(gproxy_channels::CustomChannel) as Box<dyn Channel>
+        ])
+        .expect("channel registry"),
+    )?;
+    let mut request = request(false, "unentitled");
+    request.path = "/v1/chat/completions".into();
+    request.body =
+        Bytes::from_static(br#"{"model":"alias","messages":[{"role":"user","content":"hi"}]}"#);
+    let outcome = block_on(core.execute(&host, request)).expect("the next credential serves");
+    assert_eq!(outcome.status, StatusCode::OK);
+
+    let state = host.state.lock().expect("state lock");
+    assert_eq!(state.upstream_requests.len(), 2);
+    assert_eq!(
+        state.health,
+        [
+            (
+                CredentialId(7),
+                "upstream-model".into(),
+                CredentialHealth::Dead
+            ),
+            (
+                CredentialId(8),
+                "upstream-model".into(),
+                CredentialHealth::Healthy
+            ),
+        ]
+    );
+    Ok(())
+}
+
+/// A `custom` provider target: the channel this fork points at Aliyun Bailian.
+fn custom_target(credential: CredentialId) -> Target {
+    let mut target = target();
+    target.provider.channel = "custom".into();
+    target.provider.settings = json!({"base_url": "https://bailian.example/compatible-mode"});
+    target.credential = credential;
+    target
+}
+
 fn core(host: &MemoryHost) -> Result<Core<MemoryHost>, InitError> {
     let channels =
         gproxy_channel_api::ChannelRegistry::new([Box::new(host.clone()) as Box<dyn Channel>])

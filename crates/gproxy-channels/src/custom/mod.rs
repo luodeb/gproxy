@@ -79,7 +79,7 @@ impl Channel for CustomChannel {
     }
 
     fn classify(&self, response: ResponseView<'_>) -> Disposition {
-        crate::shared::disposition::unauthorized_only(response)
+        crate::shared::disposition::unauthorized_or_unentitled(response)
     }
 
     fn stream_decoder(&self, ctx: StreamCtx<'_>) -> Option<Box<dyn StreamDecoder>> {

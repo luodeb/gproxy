@@ -226,3 +226,25 @@ fn applies_only_the_enabled_protocol_cache_and_fallback_shaping() {
         "server-side-fallback-2026-07-01"
     );
 }
+
+#[test]
+fn an_unpurchased_model_retires_the_credential_instead_of_the_client() {
+    let headers = HeaderMap::new();
+    let denied = br#"{"error":{"code":"AccessDenied.Unpurchased"}}"#;
+    assert_eq!(
+        CustomChannel.classify(gproxy_channel_api::ResponseView {
+            status: http::StatusCode::FORBIDDEN,
+            headers: &headers,
+            body: denied,
+        }),
+        gproxy_channel_api::Disposition::CredentialDead
+    );
+    assert_eq!(
+        CustomChannel.classify(gproxy_channel_api::ResponseView {
+            status: http::StatusCode::FORBIDDEN,
+            headers: &headers,
+            body: br#"{"error":{"code":"content_policy_violation"}}"#,
+        }),
+        gproxy_channel_api::Disposition::Terminal
+    );
+}
