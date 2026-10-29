@@ -356,5 +356,9 @@
       "sessionSummary": "{{requests}} requests · {{tokens}} tokens",
       "inFlightOnSession": "{{count}} in flight"
     }
+  },
+  "usage": {
+    "byModelTrend": "Per-model trend",
+    "byModelTrendDescription": "Hourly usage split by model, so you can compare them day by day."
   }
 }

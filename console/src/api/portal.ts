@@ -72,6 +72,11 @@ export type PortalUsageModelDto = {
   cost: string
 }
 
+export type PortalUsageModelSeriesDto = {
+  model: string
+  series: Array<PortalUsagePointDto>
+}
+
 export type PortalUsageOverviewDto = {
   from: number
   to: number
@@ -82,6 +87,7 @@ export type PortalUsageOverviewDto = {
   cost: string
   series: Array<PortalUsagePointDto>
   models: Array<PortalUsageModelDto>
+  model_series: Array<PortalUsageModelSeriesDto>
 }
 
 export function portalUsageOverview(query: { from: number; to: number; user_key_id?: number; model?: string }, signal?: AbortSignal) {

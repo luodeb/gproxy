@@ -356,5 +356,9 @@
       "sessionSummary": "{{requests}} 次请求 · {{tokens}} tokens",
       "inFlightOnSession": "{{count}} 个进行中"
     }
+  },
+  "usage": {
+    "byModelTrend": "分模型趋势",
+    "byModelTrendDescription": "按模型拆分的小时用量，逐日对比各模型消耗。"
   }
 }

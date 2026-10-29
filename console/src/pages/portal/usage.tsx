@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { portalKeys, portalUsageOverview } from "@/api/portal"
 import type { PortalUsageModelDto, PortalUsageOverviewDto } from "@/api/portal"
 import { QueryState } from "@/components/query-state"
-import { UsageChart, type UsageMetric } from "@/components/portal/usage-chart"
+import { UsageChart, UsageModelChart, type UsageMetric } from "@/components/portal/usage-chart"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -96,6 +96,18 @@ function UsageBody({ usage, metric, onMetric }: { usage: PortalUsageOverviewDto;
           <UsageChart points={usage.series} metric={metric} />
         </CardContent>
       </Card>
+
+      {usage.model_series.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("portal.usage.byModelTrend")}</CardTitle>
+            <CardDescription>{t("portal.usage.byModelTrendDescription")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <UsageModelChart modelSeries={usage.model_series} metric={metric} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

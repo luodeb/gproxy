@@ -160,6 +160,12 @@ pub struct PortalUsageModelDto {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PortalUsageModelSeriesDto {
+    pub model: String,
+    pub series: Vec<PortalUsagePointDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct PortalUsageOverviewDto {
     pub from: i64,
     pub to: i64,
@@ -170,6 +176,9 @@ pub struct PortalUsageOverviewDto {
     pub cost: String,
     pub series: Vec<PortalUsagePointDto>,
     pub models: Vec<PortalUsageModelDto>,
+    /// Hourly usage per upstream model, so the portal can draw one line per
+    /// model instead of only the total.
+    pub model_series: Vec<PortalUsageModelSeriesDto>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

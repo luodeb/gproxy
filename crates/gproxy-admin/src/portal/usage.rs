@@ -121,7 +121,7 @@ pub(super) async fn overview(
             to,
             user_id: Some(identity.user_id),
             user_key_id: query.user_key_id,
-            model: query.model,
+            model: query.model.clone(),
         })
         .await?
         .into_iter()
@@ -134,6 +134,47 @@ pub(super) async fn overview(
             cost: point.cost.normalize().to_string(),
         })
         .collect::<Vec<_>>();
+
+    // Per-model hourly lines, capped to the models the by-model card already
+    // shows so a long tail cannot blow up the payload.
+    let visible: std::collections::BTreeSet<String> = models
+        .iter()
+        .take(12)
+        .map(|model| model.model.clone())
+        .collect();
+    let mut model_series = Vec::new();
+    if visible.len() > 1 {
+        for trend in state
+            .store()
+            .usage_series_by_model(&UsageSeriesQuery {
+                from,
+                to,
+                user_id: Some(identity.user_id),
+                user_key_id: query.user_key_id,
+                model: query.model.clone(),
+            })
+            .await?
+        {
+            if !visible.contains(&trend.model) {
+                continue;
+            }
+            model_series.push(crate::dto::PortalUsageModelSeriesDto {
+                model: trend.model,
+                series: trend
+                    .points
+                    .into_iter()
+                    .map(|point| PortalUsagePointDto {
+                        bucket_start: point.bucket_start,
+                        requests: point.requests,
+                        input_tokens: point.input_tokens,
+                        output_tokens: point.output_tokens,
+                        cached_input_tokens: point.cached_input_tokens,
+                        cost: point.cost.normalize().to_string(),
+                    })
+                    .collect(),
+            });
+        }
+    }
 
     response::json(
         StatusCode::OK,
@@ -149,6 +190,7 @@ pub(super) async fn overview(
             cost: totals.map_or_else(|| "0".into(), |record| record.cost.normalize().to_string()),
             series,
             models,
+            model_series,
         },
     )
 }

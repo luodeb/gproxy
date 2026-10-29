@@ -117,3 +117,10 @@ pub struct UsageTrendPoint {
     pub cached_input_tokens: u64,
     pub cost: Decimal,
 }
+
+/// Hourly usage for one upstream model, over a caller-scoped range.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UsageModelTrend {
+    pub model: String,
+    pub points: Vec<UsageTrendPoint>,
+}

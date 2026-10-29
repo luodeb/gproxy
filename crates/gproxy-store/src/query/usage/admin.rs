@@ -123,3 +123,43 @@ pub(crate) fn series(
     }
     Statement::query(&query)
 }
+
+/// Same row scan as [`series`], but keeps the upstream model so bucketing can
+/// split one caller's usage per model in a single pass.
+pub(crate) fn series_by_model(
+    input: &UsageSeriesQuery,
+    after_id: i64,
+    limit: u64,
+) -> Result<Statement, StoreError> {
+    let mut query = Query::select();
+    query
+        .column(Alias::new("id"))
+        .columns(
+            [
+                "at",
+                "input_tokens",
+                "output_tokens",
+                "cached_input_tokens",
+                "cost",
+                "upstream_model",
+            ]
+            .into_iter()
+            .map(Alias::new),
+        )
+        .from(Alias::new("usage_rows"))
+        .and_where(Expr::col(Alias::new("at")).gte(input.from))
+        .and_where(Expr::col(Alias::new("at")).lt(input.to))
+        .and_where(Expr::col(Alias::new("id")).gt(after_id))
+        .order_by(Alias::new("id"), Order::Asc)
+        .limit(limit);
+    if let Some(user_id) = input.user_id {
+        query.and_where(Expr::col(Alias::new("user_id")).eq(user_id));
+    }
+    if let Some(user_key_id) = input.user_key_id {
+        query.and_where(Expr::col(Alias::new("user_key_id")).eq(user_key_id));
+    }
+    if let Some(model) = &input.model {
+        query.and_where(Expr::col(Alias::new("upstream_model")).eq(model));
+    }
+    Statement::query(&query)
+}

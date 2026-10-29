@@ -2,8 +2,8 @@ use crate::backend::Row;
 use crate::query::runtime;
 use crate::query::usage;
 use crate::records::{
-    UsageAggregateQuery, UsageAggregateRecord, UsageInput, UsageRecord, UsageSeriesQuery,
-    UsageTrendPoint, UsageWindow,
+    UsageAggregateQuery, UsageAggregateRecord, UsageInput, UsageModelTrend, UsageRecord,
+    UsageSeriesQuery, UsageTrendPoint, UsageWindow,
 };
 use crate::{Store, StoreError};
 use rust_decimal::prelude::ToPrimitive as _;
@@ -143,6 +143,87 @@ impl Store {
             }
         }
         Ok(buckets.into_values().collect())
+    }
+
+    /// One caller's usage over time, bucketed hourly and split per upstream
+    /// model, in a single row scan. Powers the portal per-model trend chart.
+    pub async fn usage_series_by_model(
+        &self,
+        query: &UsageSeriesQuery,
+    ) -> Result<Vec<UsageModelTrend>, StoreError> {
+        const PAGE_SIZE: u64 = 5_000;
+        const MAX_PAGES: usize = 20;
+        type BucketKey = (String, i64);
+        let mut buckets = std::collections::BTreeMap::<BucketKey, UsageTrendPoint>::new();
+        let mut after_id = 0;
+        for page in 0..MAX_PAGES {
+            let page_limit = if page + 1 == MAX_PAGES {
+                PAGE_SIZE + 1
+            } else {
+                PAGE_SIZE
+            };
+            let rows = self
+                .backend()
+                .execute(usage::series_by_model(query, after_id, page_limit)?)
+                .await?
+                .rows;
+            let row_count = rows.len();
+            if page + 1 == MAX_PAGES && row_count > PAGE_SIZE as usize {
+                return Err(StoreError::InvalidData {
+                    field: "usage series by model",
+                    message: "range exceeds 100000 rows; narrow the time range".into(),
+                });
+            }
+            for row in rows {
+                after_id = row.i64("id")?;
+                let model = row.text("upstream_model")?.to_string();
+                let at = row.i64("at")?;
+                let bucket_start = at - at.rem_euclid(3_600);
+                let value = buckets
+                    .entry((model, bucket_start))
+                    .or_insert(UsageTrendPoint {
+                        bucket_start,
+                        requests: 0,
+                        input_tokens: 0,
+                        output_tokens: 0,
+                        cached_input_tokens: 0,
+                        cost: rust_decimal::Decimal::ZERO,
+                    });
+                checked_add(&mut value.requests, 1, "requests")?;
+                for (target, column) in [
+                    (&mut value.input_tokens, "input_tokens"),
+                    (&mut value.output_tokens, "output_tokens"),
+                    (&mut value.cached_input_tokens, "cached_input_tokens"),
+                ] {
+                    checked_add(target, unsigned(row.i64(column)?, column)?, column)?;
+                }
+                value.cost += decimal(row.text("cost")?, "cost")?;
+            }
+            if row_count < page_limit as usize {
+                break;
+            }
+        }
+        let mut models = std::collections::BTreeMap::<String, UsageModelTrend>::new();
+        for ((model, _), point) in buckets {
+            models
+                .entry(model.clone())
+                .or_insert_with(|| UsageModelTrend {
+                    model,
+                    points: Vec::new(),
+                })
+                .points
+                .push(point);
+        }
+        let mut trends: Vec<UsageModelTrend> = models.into_values().collect();
+        for trend in &mut trends {
+            trend.points.sort_by_key(|point| point.bucket_start);
+        }
+        trends.sort_by(|left, right| {
+            let left_total: u64 = left.points.iter().map(|point| point.requests).sum();
+            let right_total: u64 = right.points.iter().map(|point| point.requests).sum();
+            right_total.cmp(&left_total).then_with(|| left.model.cmp(&right.model))
+        });
+        Ok(trends)
     }
 
     pub async fn record_usage(&self, input: &UsageInput) -> Result<bool, StoreError> {
